@@ -7,7 +7,7 @@
 # Ernestho Serafini
 <sub>*Evoluindo em ciências de dados* </sub>
 
-Sou formado em ciência de dados pela UVV (Universidade de Vila Velha -ES) e venho aumentando meu conhecimento da área. Quero poder expor meus conhecimento conforme aprimoro para poder contribuir com quem também está com este objetivo. 
+Sou formado em ciência de dados pela UVV (Universidade de Vila Velha -ES) e venho aumentando meu conhecimento na área. Quero expor meu conhecimento conforme aprimoro, para contribuir com quem tem por objetivo conhecer mais área. 
 
 **Background in:** Python.
 
