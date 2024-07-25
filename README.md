@@ -13,7 +13,8 @@ Sou formado em ciência de dados pela UVV (Universidade de Vila Velha -ES) e ven
 
 **Links:**
 * [LinkedIn](https://www.linkedin.com/in/ernestho-serafini)
-* [Medium](https://www.medium.com)
+* [Medium](https://www.medium.com)  
+* [Data Hackers](https://www.datahackers.com.br/)
 
 
 ## Projetos:
