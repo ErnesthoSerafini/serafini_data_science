@@ -9,7 +9,7 @@
 
 Sou formado em ciência de dados pela UVV (Universidade de Vila Velha -ES) e venho aumentando meu conhecimento na área. Quero expor meu conhecimento conforme aprimoro, para contribuir com quem tem por objetivo conhecer mais área. 
 
-**Background in:** Python.
+**Background in:** Python, Data Science.
 
 **Links:**
 * [LinkedIn](https://www.linkedin.com/in/ernestho-serafini)
