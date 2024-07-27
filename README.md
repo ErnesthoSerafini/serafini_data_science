@@ -17,9 +17,9 @@ Sou formado em ciência de dados pela UVV (Universidade de Vila Velha -ES) e ven
 * [Data Hackers](https://www.datahackers.com.br/)
 
 
-## Projetos:
+## Notebooks:
 Conforme for criando vou disponibilizar:
 
-* **Em andamento:** LinK
+* **Analisando os Dados do Airbnb de Londres:** https://bit.ly/3SpOaQF
 
 ---
