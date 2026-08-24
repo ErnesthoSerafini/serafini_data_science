@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
-<title>Controle de mamadas — Ravi</title>
+<title>Diário do Ravi</title>
 <meta name="theme-color" content="#3d574c">
-<meta name="description" content="Registro rápido de mamadas e medicamentos do Ravi, com histórico, exportação e funcionamento offline.">
+<meta name="description" content="Registro rápido de mamadas, medicamentos e crescimento do Ravi, com histórico, exportação e funcionamento offline.">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon.svg">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Mamadas Ravi">
+<meta name="apple-mobile-web-app-title" content="Diário do Ravi">
 <style>
   :root{
     --ink:#1f2b28;
@@ -354,7 +354,12 @@
     color:var(--amber);
     white-space:nowrap;
   }
-  .entry .del{
+  .entry-actions{
+    display:flex;
+    gap:2px;
+    flex-shrink:0;
+  }
+  .entry .del, .entry .edit{
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
     font-size:1.1rem;
     color:var(--line);
@@ -365,6 +370,7 @@
     line-height:1;
   }
   .entry .del:active{ color:var(--danger); }
+  .entry .edit:active{ color:var(--sage-deep); }
 
   .empty{
     text-align:center;
@@ -491,10 +497,13 @@
 <div class="wrap">
   <header>
     <div>
-      <h1>Mamadas do Ravi</h1>
+      <h1 id="appTitle">Diário do Ravi</h1>
       <div class="sub">registro rápido</div>
     </div>
-    <button id="exportBtn" class="export-btn" aria-label="Exportar histórico">Exportar</button>
+    <div style="display:flex;gap:8px;">
+      <button id="settingsBtn" class="mini-btn" aria-label="Configurações">⚙</button>
+      <button id="exportBtn" class="export-btn" aria-label="Exportar histórico">Exportar</button>
+    </div>
   </header>
 
   <div class="modal-overlay" id="exportOverlay">
@@ -556,6 +565,115 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="settingsOverlay">
+    <div class="modal-box">
+      <div class="modal-title">Configurações</div>
+      <label class="modal-field-label">Nome do app</label>
+      <input type="text" id="settingsAppName" style="margin-bottom:12px;">
+      <label class="modal-field-label">Data de nascimento do Ravi</label>
+      <input type="date" id="settingsBirthDate">
+      <div class="modal-sub" style="margin-top:6px;margin-bottom:0;">Usada para calcular a idade em meses no gráfico de crescimento.</div>
+      <div class="modal-actions">
+        <button id="saveSettingsBtn" class="modal-btn primary">Salvar</button>
+        <button id="cancelSettingsBtn" class="modal-btn">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="editOverlay">
+    <div class="modal-box">
+      <div class="modal-title">Editar registro</div>
+      <div id="editFeedFields">
+        <div class="seg" id="editTipoSeg">
+          <button data-tipo="peito">Só peito</button>
+          <button data-tipo="formula">Só fórmula</button>
+          <button data-tipo="mix">Peito + fórmula</button>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>Data</label>
+            <input type="date" id="editDate">
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>Início</label>
+            <input type="time" id="editInicio">
+          </div>
+          <div class="field">
+            <label>Término</label>
+            <input type="time" id="editTermino">
+          </div>
+        </div>
+        <div id="editMlField">
+          <label class="modal-field-label">Fórmula (ml)</label>
+          <input type="number" id="editMl" min="0" style="margin-bottom:12px;">
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>Observação</label>
+            <input type="text" id="editObs">
+          </div>
+        </div>
+      </div>
+      <div id="editMedFields" style="display:none;">
+        <label class="modal-field-label">Medicamento</label>
+        <select id="editMedSelect" style="width:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:1rem;padding:10px;border-radius:9px;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);margin-bottom:12px;"></select>
+        <div class="row">
+          <div class="field">
+            <label>Data</label>
+            <input type="date" id="editMedDate">
+          </div>
+          <div class="field">
+            <label>Horário</label>
+            <input type="time" id="editMedTime">
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="saveEditBtn" class="modal-btn primary">Salvar</button>
+        <button id="cancelEditBtn" class="modal-btn">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="growthOverlay">
+    <div class="modal-box">
+      <div class="modal-title">Registrar peso/altura</div>
+      <div class="modal-sub">Preencha ao menos um dos dois campos.</div>
+      <label class="modal-field-label">Data</label>
+      <input type="date" id="growthDate" style="margin-bottom:12px;">
+      <div class="row">
+        <div class="field">
+          <label>Peso (kg)</label>
+          <input type="number" id="growthWeight" placeholder="ex: 4.250" step="0.001" min="0">
+        </div>
+        <div class="field">
+          <label>Altura (cm)</label>
+          <input type="number" id="growthHeight" placeholder="ex: 55" step="0.5" min="0">
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="saveGrowthBtn" class="modal-btn primary">Salvar</button>
+        <button id="cancelGrowthBtn" class="modal-btn">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="growthChartOverlay">
+    <div class="modal-box">
+      <div class="modal-title">Evolução do Ravi</div>
+      <div class="modal-sub" id="growthChartSub">Peso e altura por idade em meses.</div>
+      <label class="modal-field-label">Peso (kg)</label>
+      <div id="weightChart"></div>
+      <label class="modal-field-label" style="margin-top:16px;">Altura (cm)</label>
+      <div id="heightChart"></div>
+      <div class="modal-actions">
+        <button id="closeGrowthChartBtn" class="modal-btn">Fechar</button>
+      </div>
+    </div>
+  </div>
+
   <div class="card" id="dateCard">
     <label style="display:block;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:.68rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:6px;">Data do registro</label>
     <input type="date" id="dataInput">
@@ -574,6 +692,17 @@
       <button id="addMedBtn" class="mini-btn" aria-label="Adicionar medicamento">＋ Adicionar</button>
     </div>
     <div class="med-grid" id="medGrid"></div>
+  </div>
+
+  <div class="card">
+    <div class="section-head">
+      <div class="section-label">Crescimento</div>
+      <div style="display:flex;gap:8px;">
+        <button id="viewGrowthChartBtn" class="mini-btn">Gráfico</button>
+        <button id="addGrowthBtn" class="mini-btn">＋ Registrar</button>
+      </div>
+    </div>
+    <div class="med-grid" id="growthSummary"></div>
   </div>
 
   <div class="card">
@@ -624,11 +753,15 @@
 const STORAGE_KEY = 'ravi-mamadas';
 const MED_STORAGE_KEY = 'ravi-meds';
 const FORMULA_CFG_KEY = 'ravi-formula-config';
+const SETTINGS_KEY = 'ravi-settings';
+const GROWTH_KEY = 'ravi-growth';
 const MED_COLORS = ['#c98a3b','#3d574c','#5c7c6f','#b2543f','#8b6f47','#4a6fa5','#a85f8a','#5f8a7a'];
 
 let entries = [];
 let meds = [];
+let growth = [];
 let formulaConfig = { max: 80, step: 10 };
+let settings = { appName: 'Diário do Ravi', birthDate: '' };
 let tipo = 'peito';
 
 const tipoSeg = document.getElementById('tipoSeg');
@@ -755,9 +888,12 @@ dataInputEl.value = todayKey();
 function selectedDateKey(){
   return dataInputEl.value || todayKey();
 }
-function selectedDateLabel(){
-  const [y,m,d] = selectedDateKey().split('-').map(Number);
+function dateLabelFor(dateKey){
+  const [y,m,d] = dateKey.split('-').map(Number);
   return String(d).padStart(2,'0')+'/'+String(m).padStart(2,'0')+'/'+y;
+}
+function selectedDateLabel(){
+  return dateLabelFor(selectedDateKey());
 }
 
 function loadEntries(){
@@ -814,10 +950,143 @@ function deleteEntry(id){
   showStatus('Removido');
 }
 
+// ---- Editar registro ----
+
+let editingId = null;
+const editOverlay = document.getElementById('editOverlay');
+const editTipoSeg = document.getElementById('editTipoSeg');
+const editMlField = document.getElementById('editMlField');
+
+editTipoSeg.addEventListener('click', e=>{
+  const b = e.target.closest('button');
+  if(!b) return;
+  [...editTipoSeg.children].forEach(x=>x.classList.toggle('active', x===b));
+  editMlField.style.display = (b.dataset.tipo==='peito') ? 'none' : 'block';
+});
+
+function openEditModal(id){
+  const e = entries.find(x=>x.id===id);
+  if(!e) return;
+  editingId = id;
+
+  if(e.kind==='med'){
+    document.getElementById('editFeedFields').style.display = 'none';
+    document.getElementById('editMedFields').style.display = 'block';
+    const sel = document.getElementById('editMedSelect');
+    let optionsHtml = meds.map(m=>`<option value="${m.id}" ${m.id===e.medId?'selected':''}>${escapeHtml(m.name)}</option>`).join('');
+    if(e.medId && !meds.find(m=>m.id===e.medId)){
+      optionsHtml = `<option value="${e.medId}" selected>${escapeHtml(e.medName)} (removido)</option>` + optionsHtml;
+    }
+    sel.innerHTML = optionsHtml;
+    document.getElementById('editMedDate').value = e.dateKey;
+    document.getElementById('editMedTime').value = e.inicio;
+  } else {
+    document.getElementById('editFeedFields').style.display = 'block';
+    document.getElementById('editMedFields').style.display = 'none';
+    [...editTipoSeg.children].forEach(b=>b.classList.toggle('active', b.dataset.tipo===e.tipo));
+    editMlField.style.display = (e.tipo==='peito') ? 'none' : 'block';
+    document.getElementById('editDate').value = e.dateKey;
+    document.getElementById('editInicio').value = e.inicio;
+    document.getElementById('editTermino').value = e.termino || '';
+    document.getElementById('editMl').value = (e.ml!==null && e.ml!==undefined) ? e.ml : '';
+    document.getElementById('editObs').value = e.obs || '';
+  }
+  editOverlay.classList.add('show');
+}
+
+document.getElementById('cancelEditBtn').addEventListener('click', ()=>{
+  editOverlay.classList.remove('show');
+});
+document.getElementById('saveEditBtn').addEventListener('click', ()=>{
+  const idx = entries.findIndex(x=>x.id===editingId);
+  if(idx===-1) return;
+  const e = entries[idx];
+
+  if(e.kind==='med'){
+    const medId = document.getElementById('editMedSelect').value;
+    const med = meds.find(m=>m.id===medId);
+    const dateKey = document.getElementById('editMedDate').value || e.dateKey;
+    const inicio = document.getElementById('editMedTime').value || e.inicio;
+    entries[idx] = {
+      ...e,
+      medId,
+      medName: med ? med.name : e.medName,
+      dateKey,
+      dateLabel: dateLabelFor(dateKey),
+      inicio
+    };
+  } else {
+    const activeBtn = editTipoSeg.querySelector('button.active');
+    const tipoVal = activeBtn ? activeBtn.dataset.tipo : e.tipo;
+    const inicio = document.getElementById('editInicio').value;
+    if(!inicio){ showStatus('Preencha o início'); return; }
+    const dateKey = document.getElementById('editDate').value || e.dateKey;
+    const termino = document.getElementById('editTermino').value || null;
+    const ml = (tipoVal==='peito') ? null : Math.max(0, parseInt(document.getElementById('editMl').value)||0);
+    const obs = document.getElementById('editObs').value.trim();
+    entries[idx] = {
+      ...e,
+      tipo: tipoVal,
+      dateKey,
+      dateLabel: dateLabelFor(dateKey),
+      inicio, termino, ml, obs
+    };
+  }
+
+  persist();
+  render();
+  editOverlay.classList.remove('show');
+  showStatus('Registro atualizado');
+});
+
 function tipoLabel(e){
   if(e.tipo==='peito') return 'Só peito';
   if(e.tipo==='formula') return 'Só fórmula';
   return 'Peito + fórmula';
+}
+
+// ---- Configurações ----
+
+function loadSettings(){
+  try{
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if(raw){ settings = { appName:'Diário do Ravi', birthDate:'', ...JSON.parse(raw) }; return; }
+  }catch(e){}
+  settings = { appName: 'Diário do Ravi', birthDate: '' };
+}
+function persistSettings(){
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+}
+function applySettings(){
+  document.getElementById('appTitle').textContent = settings.appName || 'Diário do Ravi';
+  document.title = settings.appName || 'Diário do Ravi';
+}
+
+document.getElementById('settingsBtn').addEventListener('click', ()=>{
+  document.getElementById('settingsAppName').value = settings.appName;
+  document.getElementById('settingsBirthDate').value = settings.birthDate || '';
+  document.getElementById('settingsOverlay').classList.add('show');
+});
+document.getElementById('cancelSettingsBtn').addEventListener('click', ()=>{
+  document.getElementById('settingsOverlay').classList.remove('show');
+});
+document.getElementById('saveSettingsBtn').addEventListener('click', ()=>{
+  const name = document.getElementById('settingsAppName').value.trim() || 'Diário do Ravi';
+  const birthDate = document.getElementById('settingsBirthDate').value || '';
+  settings = { appName: name, birthDate };
+  persistSettings();
+  applySettings();
+  document.getElementById('settingsOverlay').classList.remove('show');
+  showStatus('Configurações salvas');
+});
+
+function ageMonthsAt(dateKey){
+  if(!settings.birthDate) return null;
+  const [by,bm,bd] = settings.birthDate.split('-').map(Number);
+  const [y,m,d] = dateKey.split('-').map(Number);
+  let months = (y-by)*12 + (m-bm);
+  if(d < bd) months -= 1;
+  return Math.max(0, months);
 }
 
 // ---- Medicamentos ----
@@ -991,6 +1260,149 @@ function updateMedNext(){
   });
 }
 
+// ---- Crescimento (peso/altura) ----
+
+function loadGrowth(){
+  try{
+    const raw = localStorage.getItem(GROWTH_KEY);
+    growth = raw ? JSON.parse(raw) : [];
+  }catch(e){
+    growth = [];
+  }
+}
+function persistGrowth(){
+  localStorage.setItem(GROWTH_KEY, JSON.stringify(growth));
+}
+
+function renderGrowthSummary(){
+  const sorted = [...growth].sort((a,b)=> a.dateKey.localeCompare(b.dateKey));
+  const weightPoints = sorted.filter(g=> g.weightKg!==null && g.weightKg!==undefined);
+  const heightPoints = sorted.filter(g=> g.heightCm!==null && g.heightCm!==undefined);
+
+  function box(label, points, unit, decimals){
+    if(points.length===0){
+      return `<div class="med-box"><div class="med-name">${label}</div><div class="med-next">nenhum registro ainda</div></div>`;
+    }
+    const last = points[points.length-1];
+    const prev = points.length>1 ? points[points.length-2] : null;
+    const val = unit==='kg' ? last.weightKg : last.heightCm;
+    let deltaHtml = '';
+    if(prev){
+      const prevVal = unit==='kg' ? prev.weightKg : prev.heightCm;
+      const diff = val - prevVal;
+      const sign = diff>=0 ? '+' : '';
+      deltaHtml = `<div class="med-count">${sign}${diff.toFixed(decimals)}${unit} desde ${dateLabelFor(prev.dateKey)}</div>`;
+    }
+    return `<div class="med-box">
+      <div class="med-name">${label}</div>
+      <div class="med-next ready">${val.toFixed(decimals)}${unit} · ${dateLabelFor(last.dateKey)}</div>
+      ${deltaHtml}
+    </div>`;
+  }
+
+  document.getElementById('growthSummary').innerHTML =
+    box('Peso', weightPoints, 'kg', 3) + box('Altura', heightPoints, 'cm', 0);
+}
+
+document.getElementById('addGrowthBtn').addEventListener('click', ()=>{
+  document.getElementById('growthDate').value = todayKey();
+  document.getElementById('growthWeight').value = '';
+  document.getElementById('growthHeight').value = '';
+  document.getElementById('growthOverlay').classList.add('show');
+});
+document.getElementById('cancelGrowthBtn').addEventListener('click', ()=>{
+  document.getElementById('growthOverlay').classList.remove('show');
+});
+document.getElementById('saveGrowthBtn').addEventListener('click', ()=>{
+  const dateKey = document.getElementById('growthDate').value || todayKey();
+  const weightRaw = document.getElementById('growthWeight').value;
+  const heightRaw = document.getElementById('growthHeight').value;
+  const weightKg = weightRaw ? parseFloat(weightRaw) : null;
+  const heightCm = heightRaw ? parseFloat(heightRaw) : null;
+  if((weightKg===null || isNaN(weightKg)) && (heightCm===null || isNaN(heightCm))){
+    showStatus('Preencha peso ou altura');
+    return;
+  }
+  growth.push({
+    id: 'g-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),
+    dateKey,
+    weightKg: isNaN(weightKg) ? null : weightKg,
+    heightCm: isNaN(heightCm) ? null : heightCm,
+    createdAt: new Date().toISOString()
+  });
+  persistGrowth();
+  renderGrowthSummary();
+  document.getElementById('growthOverlay').classList.remove('show');
+  showStatus('Registro salvo');
+});
+
+function buildLineChartSvg(points, color){
+  if(points.length===0){
+    return '<div class="empty" style="padding:16px 0;">Sem registros ainda.</div>';
+  }
+  const width = 280, height = 150;
+  const padding = { top: 14, right: 12, bottom: 22, left: 34 };
+  const xs = points.map(p=>p.x), ys = points.map(p=>p.y);
+  const xMin = Math.min(...xs), xMax = Math.max(...xs);
+  const yMin = Math.min(...ys), yMax = Math.max(...ys);
+  const yPad = (yMax - yMin) * 0.2 || Math.max(1, yMax * 0.1);
+  const yLo = yMin - yPad, yHi = yMax + yPad;
+  const xSpan = (xMax - xMin) || 1;
+  const plotW = width - padding.left - padding.right;
+  const plotH = height - padding.top - padding.bottom;
+
+  const sx = x => padding.left + ((x - xMin)/xSpan)*plotW;
+  const sy = y => padding.top + plotH - ((y - yLo)/(yHi-yLo))*plotH;
+
+  const pathD = points.map((p,i)=> (i===0?'M':'L') + sx(p.x).toFixed(1) + ',' + sy(p.y).toFixed(1)).join(' ');
+  const dots = points.map(p=> `<circle cx="${sx(p.x).toFixed(1)}" cy="${sy(p.y).toFixed(1)}" r="3.5" fill="${color}"></circle>`).join('');
+  const xLabelEvery = points.length > 8 ? Math.ceil(points.length/8) : 1;
+  const xTicks = points.map((p,i)=> (i % xLabelEvery === 0 || i===points.length-1)
+    ? `<text x="${sx(p.x).toFixed(1)}" y="${height-6}" font-size="9" text-anchor="middle" fill="#8b9089">${escapeHtml(p.label)}</text>`
+    : '').join('');
+
+  return `<svg viewBox="0 0 ${width} ${height}" style="width:100%;height:auto;display:block;">
+    <line x1="${padding.left}" y1="${padding.top}" x2="${padding.left}" y2="${height-padding.bottom}" stroke="#e2ddd0"/>
+    <line x1="${padding.left}" y1="${height-padding.bottom}" x2="${width-padding.right}" y2="${height-padding.bottom}" stroke="#e2ddd0"/>
+    <text x="2" y="${padding.top+4}" font-size="9" fill="#8b9089">${yHi.toFixed(1)}</text>
+    <text x="2" y="${height-padding.bottom}" font-size="9" fill="#8b9089">${yLo.toFixed(1)}</text>
+    <path d="${pathD}" fill="none" stroke="${color}" stroke-width="2"/>
+    ${dots}
+    ${xTicks}
+  </svg>`;
+}
+
+function renderGrowthCharts(){
+  const sorted = [...growth].sort((a,b)=> a.dateKey.localeCompare(b.dateKey));
+  const hasBirth = !!settings.birthDate;
+  document.getElementById('growthChartSub').textContent = hasBirth
+    ? 'Peso e altura por idade em meses.'
+    : 'Defina a data de nascimento em Configurações para ver por idade em meses. Mostrando por data de registro.';
+
+  function toPoints(filterFn, valueFn){
+    return sorted.filter(filterFn).map(g=>{
+      const months = ageMonthsAt(g.dateKey);
+      if(hasBirth && months!==null){
+        return { x: months, y: valueFn(g), label: months+'m' };
+      }
+      return { x: new Date(g.dateKey+'T00:00:00').getTime(), y: valueFn(g), label: dateLabelFor(g.dateKey).slice(0,5) };
+    });
+  }
+  const weightPoints = toPoints(g=>g.weightKg!==null && g.weightKg!==undefined, g=>g.weightKg);
+  const heightPoints = toPoints(g=>g.heightCm!==null && g.heightCm!==undefined, g=>g.heightCm);
+
+  document.getElementById('weightChart').innerHTML = buildLineChartSvg(weightPoints, '#c98a3b');
+  document.getElementById('heightChart').innerHTML = buildLineChartSvg(heightPoints, '#3d574c');
+}
+
+document.getElementById('viewGrowthChartBtn').addEventListener('click', ()=>{
+  renderGrowthCharts();
+  document.getElementById('growthChartOverlay').classList.add('show');
+});
+document.getElementById('closeGrowthChartBtn').addEventListener('click', ()=>{
+  document.getElementById('growthChartOverlay').classList.remove('show');
+});
+
 function entryTimestamp(e){
   // build a Date from dateKey + (termino || inicio)
   const timeStr = e.termino || e.inicio;
@@ -1073,7 +1485,10 @@ function render(){
               <div class="time">${e.inicio}</div>
               <div class="meta">${escapeHtml(e.medName)}</div>
             </div>
-            <button class="del" data-id="${e.id}" aria-label="Excluir">✕</button>
+            <div class="entry-actions">
+              <button class="edit" data-id="${e.id}" aria-label="Editar">✎</button>
+              <button class="del" data-id="${e.id}" aria-label="Excluir">✕</button>
+            </div>
           </div>`;
         return;
       }
@@ -1090,12 +1505,18 @@ function render(){
             <div class="meta">${metaParts.join(' · ')}</div>
           </div>
           ${mlTag}
-          <button class="del" data-id="${e.id}" aria-label="Excluir">✕</button>
+          <div class="entry-actions">
+            <button class="edit" data-id="${e.id}" aria-label="Editar">✎</button>
+            <button class="del" data-id="${e.id}" aria-label="Excluir">✕</button>
+          </div>
         </div>`;
     });
   });
   historyEl.innerHTML = html;
 
+  historyEl.querySelectorAll('.edit').forEach(btn=>{
+    btn.addEventListener('click', ()=> openEditModal(btn.dataset.id));
+  });
   historyEl.querySelectorAll('.del').forEach(btn=>{
     btn.addEventListener('click', ()=> deleteEntry(btn.dataset.id));
   });
@@ -1139,7 +1560,7 @@ document.getElementById('downloadExportBtn').addEventListener('click', ()=>{
 function buildExportText(){
   const byDateTimeAsc = (a,b)=> entryTimestamp(a) - entryTimestamp(b);
   const lines = [];
-  lines.push('CONTROLE DE MAMADAS E MEDICAMENTOS — RAVI');
+  lines.push((settings.appName || 'Diário do Ravi').toUpperCase());
   lines.push('Exportado em ' + new Date().toLocaleString('pt-BR'));
   lines.push('');
 
@@ -1175,12 +1596,30 @@ function buildExportText(){
     lines.push(parts.join(' · '));
   });
 
+  if(growth.length){
+    lines.push('');
+    const sortedGrowth = [...growth].sort((a,b)=> a.dateKey.localeCompare(b.dateKey));
+    lines.push('=== CRESCIMENTO ('+sortedGrowth.length+' registros) ===');
+    sortedGrowth.forEach(g=>{
+      const parts = [dateLabelFor(g.dateKey)];
+      if(g.weightKg!==null && g.weightKg!==undefined) parts.push(g.weightKg.toFixed(3)+'kg');
+      if(g.heightCm!==null && g.heightCm!==undefined) parts.push(g.heightCm+'cm');
+      const months = ageMonthsAt(g.dateKey);
+      if(months!==null) parts.push(months+' meses');
+      lines.push(parts.join(' · '));
+    });
+  }
+
   return lines.join('\n');
 }
 
+loadSettings();
+applySettings();
 loadMeds();
 loadFormulaConfig();
+loadGrowth();
 renderMedGrid();
+renderGrowthSummary();
 renderMlQuick();
 updateGoal();
 loadEntries();
