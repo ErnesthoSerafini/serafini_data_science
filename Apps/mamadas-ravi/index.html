@@ -767,7 +767,15 @@ const MED_COLORS = ['#c98a3b','#3d574c','#5c7c6f','#b2543f','#8b6f47','#4a6fa5',
 
 // Preencher com o objeto firebaseConfig do seu projeto Firebase (Configurações do projeto → Seus apps)
 // para ativar a sincronização entre aparelhos. Deixe vazio para o app funcionar só localmente.
-const firebaseConfig = {};
+const firebaseConfig = {
+  apiKey: "AIzaSyBEXCC9qeBYsaEkbtgYZ9aV6AYiwgY1wR8",
+  authDomain: "diario-do-ravi.firebaseapp.com",
+  databaseURL: "https://diario-do-ravi-default-rtdb.firebaseio.com",
+  projectId: "diario-do-ravi",
+  storageBucket: "diario-do-ravi.firebasestorage.app",
+  messagingSenderId: "439285162738",
+  appId: "1:439285162738:web:b8c69114cfa3f8a0ad666b"
+};
 
 function firebaseConfigured(){
   return !!(firebaseConfig && firebaseConfig.apiKey && firebaseConfig.databaseURL);
