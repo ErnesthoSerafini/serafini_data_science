@@ -657,23 +657,35 @@
 
   <div class="modal-overlay" id="growthOverlay">
     <div class="modal-box">
-      <div class="modal-title">Registrar peso/altura</div>
-      <div class="modal-sub">Preencha ao menos um dos dois campos.</div>
+      <div class="modal-title" id="growthModalTitle">Registrar peso/altura</div>
+      <div class="modal-sub">Preencha ao menos um dos dois campos. Pode usar ponto ou vírgula pra casa decimal, tanto faz.</div>
       <label class="modal-field-label">Data</label>
       <input type="date" id="growthDate" style="margin-bottom:12px;">
       <div class="row">
         <div class="field">
           <label>Peso (kg)</label>
-          <input type="number" id="growthWeight" placeholder="ex: 4.250" step="0.001" min="0">
+          <input type="text" inputmode="decimal" id="growthWeight" placeholder="ex: 4.250 ou 4,250">
         </div>
         <div class="field">
           <label>Altura (cm)</label>
-          <input type="number" id="growthHeight" placeholder="ex: 55" step="0.5" min="0">
+          <input type="text" inputmode="decimal" id="growthHeight" placeholder="ex: 55.5">
         </div>
       </div>
       <div class="modal-actions">
         <button id="saveGrowthBtn" class="modal-btn primary">Salvar</button>
+        <button id="deleteGrowthBtn" class="modal-btn" style="display:none;">Excluir</button>
         <button id="cancelGrowthBtn" class="modal-btn">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="growthHistoryOverlay">
+    <div class="modal-box">
+      <div class="modal-title">Histórico de peso/altura</div>
+      <div class="modal-sub">Toque em "✎" para corrigir um registro.</div>
+      <div id="growthHistoryList"></div>
+      <div class="modal-actions">
+        <button id="closeGrowthHistoryBtn" class="modal-btn">Fechar</button>
       </div>
     </div>
   </div>
@@ -715,7 +727,8 @@
   <div class="card">
     <div class="section-head">
       <div class="section-label">Crescimento</div>
-      <div style="display:flex;gap:8px;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+        <button id="viewGrowthHistoryBtn" class="mini-btn">Histórico</button>
         <button id="viewGrowthChartBtn" class="mini-btn">Gráfico</button>
         <button id="addGrowthBtn" class="mini-btn">＋ Registrar</button>
       </div>
@@ -1476,10 +1489,20 @@ function renderGrowthSummary(){
   }
 
   document.getElementById('growthSummary').innerHTML =
-    box('Peso', weightPoints, 'kg', 3) + box('Altura', heightPoints, 'cm', 0);
+    box('Peso', weightPoints, 'kg', 3) + box('Altura', heightPoints, 'cm', 1);
 }
 
+function parseDecimal(str){
+  if(!str) return NaN;
+  return parseFloat(String(str).trim().replace(',', '.'));
+}
+
+let editingGrowthId = null;
+
 document.getElementById('addGrowthBtn').addEventListener('click', ()=>{
+  editingGrowthId = null;
+  document.getElementById('growthModalTitle').textContent = 'Registrar peso/altura';
+  document.getElementById('deleteGrowthBtn').style.display = 'none';
   document.getElementById('growthDate').value = todayKey();
   document.getElementById('growthWeight').value = '';
   document.getElementById('growthHeight').value = '';
@@ -1492,24 +1515,119 @@ document.getElementById('saveGrowthBtn').addEventListener('click', ()=>{
   const dateKey = document.getElementById('growthDate').value || todayKey();
   const weightRaw = document.getElementById('growthWeight').value;
   const heightRaw = document.getElementById('growthHeight').value;
-  const weightKg = weightRaw ? parseFloat(weightRaw) : null;
-  const heightCm = heightRaw ? parseFloat(heightRaw) : null;
+  const weightKg = weightRaw ? parseDecimal(weightRaw) : null;
+  const heightCm = heightRaw ? parseDecimal(heightRaw) : null;
   if((weightKg===null || isNaN(weightKg)) && (heightCm===null || isNaN(heightCm))){
     showStatus('Preencha peso ou altura');
     return;
   }
-  growth.push({
-    id: 'g-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),
+  const data = {
     dateKey,
-    weightKg: isNaN(weightKg) ? null : weightKg,
-    heightCm: isNaN(heightCm) ? null : heightCm,
-    createdAt: new Date().toISOString()
-  });
+    weightKg: (weightKg===null || isNaN(weightKg)) ? null : weightKg,
+    heightCm: (heightCm===null || isNaN(heightCm)) ? null : heightCm
+  };
+
+  if(editingGrowthId){
+    const idx = growth.findIndex(g=>g.id===editingGrowthId);
+    if(idx!==-1) growth[idx] = { ...growth[idx], ...data };
+  } else {
+    growth.push({
+      id: 'g-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),
+      ...data,
+      createdAt: new Date().toISOString()
+    });
+  }
   persistGrowth();
   renderGrowthSummary();
+  renderGrowthHistoryList();
   document.getElementById('growthOverlay').classList.remove('show');
   showStatus('Registro salvo');
 });
+
+function openGrowthEditModal(id){
+  const g = growth.find(x=>x.id===id);
+  if(!g) return;
+  editingGrowthId = id;
+  document.getElementById('growthModalTitle').textContent = 'Editar registro';
+  document.getElementById('deleteGrowthBtn').style.display = 'block';
+  document.getElementById('growthDate').value = g.dateKey;
+  document.getElementById('growthWeight').value = (g.weightKg!==null && g.weightKg!==undefined) ? g.weightKg : '';
+  document.getElementById('growthHeight').value = (g.heightCm!==null && g.heightCm!==undefined) ? g.heightCm : '';
+  document.getElementById('growthOverlay').classList.add('show');
+}
+
+document.getElementById('deleteGrowthBtn').addEventListener('click', ()=>{
+  if(!editingGrowthId) return;
+  if(!confirm('Excluir esse registro de peso/altura?')) return;
+  growth = growth.filter(g=>g.id!==editingGrowthId);
+  persistGrowth();
+  renderGrowthSummary();
+  renderGrowthHistoryList();
+  document.getElementById('growthOverlay').classList.remove('show');
+  showStatus('Registro excluído');
+});
+
+function renderGrowthHistoryList(){
+  const listEl = document.getElementById('growthHistoryList');
+  if(growth.length===0){
+    listEl.innerHTML = '<div class="empty" style="padding:16px 0;">Nenhum registro ainda.</div>';
+    return;
+  }
+  const sorted = [...growth].sort((a,b)=> b.dateKey.localeCompare(a.dateKey));
+  listEl.innerHTML = sorted.map(g=>{
+    const parts = [];
+    if(g.weightKg!==null && g.weightKg!==undefined) parts.push(g.weightKg.toFixed(3)+'kg');
+    if(g.heightCm!==null && g.heightCm!==undefined) parts.push(g.heightCm.toFixed(1)+'cm');
+    return `
+      <div class="entry">
+        <div class="dot"></div>
+        <div class="info">
+          <div class="time">${dateLabelFor(g.dateKey)}</div>
+          <div class="meta">${parts.join(' · ')}</div>
+        </div>
+        <div class="entry-actions">
+          <button class="edit" data-id="${g.id}" aria-label="Editar">✎</button>
+        </div>
+      </div>`;
+  }).join('');
+  listEl.querySelectorAll('.edit').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.getElementById('growthHistoryOverlay').classList.remove('show');
+      openGrowthEditModal(btn.dataset.id);
+    });
+  });
+}
+
+document.getElementById('viewGrowthHistoryBtn').addEventListener('click', ()=>{
+  renderGrowthHistoryList();
+  document.getElementById('growthHistoryOverlay').classList.add('show');
+});
+document.getElementById('closeGrowthHistoryBtn').addEventListener('click', ()=>{
+  document.getElementById('growthHistoryOverlay').classList.remove('show');
+});
+
+function smoothPathD(pts){
+  if(pts.length===0) return '';
+  if(pts.length===1) return `M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`;
+  if(pts.length===2){
+    return `M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)} L${pts[1].x.toFixed(1)},${pts[1].y.toFixed(1)}`;
+  }
+  // Catmull-Rom -> cubic Bézier, pra desenhar uma curva suave passando por todos os pontos
+  // em vez de segmentos retos ligando ponto a ponto.
+  let d = `M${pts[0].x.toFixed(1)},${pts[0].y.toFixed(1)}`;
+  for(let i=0; i<pts.length-1; i++){
+    const p0 = pts[i-1] || pts[i];
+    const p1 = pts[i];
+    const p2 = pts[i+1];
+    const p3 = pts[i+2] || p2;
+    const cp1x = p1.x + (p2.x - p0.x)/6;
+    const cp1y = p1.y + (p2.y - p0.y)/6;
+    const cp2x = p2.x - (p3.x - p1.x)/6;
+    const cp2y = p2.y - (p3.y - p1.y)/6;
+    d += ` C${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`;
+  }
+  return d;
+}
 
 function buildLineChartSvg(points, color){
   if(points.length===0){
@@ -1529,12 +1647,17 @@ function buildLineChartSvg(points, color){
   const sx = x => padding.left + ((x - xMin)/xSpan)*plotW;
   const sy = y => padding.top + plotH - ((y - yLo)/(yHi-yLo))*plotH;
 
-  const pathD = points.map((p,i)=> (i===0?'M':'L') + sx(p.x).toFixed(1) + ',' + sy(p.y).toFixed(1)).join(' ');
-  const dots = points.map(p=> `<circle cx="${sx(p.x).toFixed(1)}" cy="${sy(p.y).toFixed(1)}" r="3.5" fill="${color}"></circle>`).join('');
+  const screenPts = points.map(p=> ({ x: sx(p.x), y: sy(p.y) }));
+  const pathD = smoothPathD(screenPts);
+  const dots = screenPts.map(p=> `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.5" fill="${color}"></circle>`).join('');
   const xLabelEvery = points.length > 8 ? Math.ceil(points.length/8) : 1;
-  const xTicks = points.map((p,i)=> (i % xLabelEvery === 0 || i===points.length-1)
-    ? `<text x="${sx(p.x).toFixed(1)}" y="${height-6}" font-size="9" text-anchor="middle" fill="#8b9089">${escapeHtml(p.label)}</text>`
-    : '').join('');
+  let lastLabelShown = null;
+  const xTicks = points.map((p,i)=>{
+    const eligible = i % xLabelEvery === 0 || i===points.length-1;
+    if(!eligible || p.label===lastLabelShown) return '';
+    lastLabelShown = p.label;
+    return `<text x="${sx(p.x).toFixed(1)}" y="${height-6}" font-size="9" text-anchor="middle" fill="#8b9089">${escapeHtml(p.label)}</text>`;
+  }).join('');
 
   return `<svg viewBox="0 0 ${width} ${height}" style="width:100%;height:auto;display:block;">
     <line x1="${padding.left}" y1="${padding.top}" x2="${padding.left}" y2="${height-padding.bottom}" stroke="#e2ddd0"/>
@@ -1556,11 +1679,12 @@ function renderGrowthCharts(){
 
   function toPoints(filterFn, valueFn){
     return sorted.filter(filterFn).map(g=>{
+      // x sempre é a data real, pra o espaçamento entre pontos refletir o tempo
+      // que passou de verdade — só o texto do rótulo muda conforme a idade em meses.
+      const x = new Date(g.dateKey+'T00:00:00').getTime();
       const months = ageMonthsAt(g.dateKey);
-      if(hasBirth && months!==null){
-        return { x: months, y: valueFn(g), label: months+'m' };
-      }
-      return { x: new Date(g.dateKey+'T00:00:00').getTime(), y: valueFn(g), label: dateLabelFor(g.dateKey).slice(0,5) };
+      const label = (hasBirth && months!==null) ? (months+'m') : dateLabelFor(g.dateKey).slice(0,5);
+      return { x, y: valueFn(g), label };
     });
   }
   const weightPoints = toPoints(g=>g.weightKg!==null && g.weightKg!==undefined, g=>g.weightKg);
@@ -1778,7 +1902,7 @@ function buildExportText(){
     sortedGrowth.forEach(g=>{
       const parts = [dateLabelFor(g.dateKey)];
       if(g.weightKg!==null && g.weightKg!==undefined) parts.push(g.weightKg.toFixed(3)+'kg');
-      if(g.heightCm!==null && g.heightCm!==undefined) parts.push(g.heightCm+'cm');
+      if(g.heightCm!==null && g.heightCm!==undefined) parts.push(g.heightCm.toFixed(1)+'cm');
       const months = ageMonthsAt(g.dateKey);
       if(months!==null) parts.push(months+' meses');
       lines.push(parts.join(' · '));
