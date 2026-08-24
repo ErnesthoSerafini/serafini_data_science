@@ -178,21 +178,70 @@
   }
   .save-btn:active{ background:var(--sage); }
 
+  .section-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:8px;
+    margin-bottom:10px;
+  }
+  .section-label{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:.68rem;
+    text-transform:uppercase;
+    letter-spacing:1px;
+    color:var(--muted);
+  }
+  .mini-btn{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:.72rem;
+    font-weight:700;
+    padding:7px 12px;
+    border-radius:20px;
+    border:1.5px solid var(--sage-deep);
+    background:transparent;
+    color:var(--sage-deep);
+    cursor:pointer;
+    white-space:nowrap;
+    flex-shrink:0;
+  }
+  .mini-btn:active{ background:var(--sage-deep); color:#fff; }
+
   .med-grid{
     display:flex;
+    flex-wrap:wrap;
     gap:10px;
   }
   .med-box{
     flex:1;
+    min-width:140px;
     background:var(--paper);
     border:1px solid var(--line);
     border-radius:11px;
     padding:11px;
   }
+  .med-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:6px;
+  }
   .med-name{
     font-weight:700;
     font-size:.92rem;
   }
+  .med-del{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:1rem;
+    color:var(--line);
+    background:none;
+    border:none;
+    cursor:pointer;
+    padding:0 2px;
+    line-height:1;
+    flex-shrink:0;
+  }
+  .med-del:active{ color:var(--danger); }
   .med-next{
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
     font-size:.74rem;
@@ -220,8 +269,31 @@
     cursor:pointer;
     white-space:nowrap;
   }
-  .med-btn.colic{ background:var(--amber); }
-  .med-btn.simet{ background:var(--sage-deep); }
+
+  .stepper-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:14px;
+  }
+  .stepper-btn{
+    width:46px;
+    height:44px;
+    flex-shrink:0;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:1.1rem;
+    font-weight:700;
+    border-radius:9px;
+    border:1.5px solid var(--line);
+    background:var(--milk);
+    color:var(--sage-deep);
+    cursor:pointer;
+  }
+  .stepper-btn:active{ background:var(--sage-deep); color:#fff; }
+  .stepper-input{
+    flex:1;
+    text-align:center;
+  }
 
   .day-heading{
     font-size:.95rem;
@@ -257,8 +329,6 @@
   }
   .entry.formula .dot{ background:var(--amber); }
   .entry.mix .dot{ background:linear-gradient(135deg,var(--sage) 50%,var(--amber) 50%); }
-  .entry.med-colic .dot{ background:#c98a3b; }
-  .entry.med-simet .dot{ background:#3d574c; }
   .entry .info{ flex:1; min-width:0; }
   .entry .time{
     font-weight:700;
@@ -348,6 +418,7 @@
     max-height:85vh;
     display:flex;
     flex-direction:column;
+    overflow-y:auto;
   }
   .modal-title{
     font-size:1.1rem;
@@ -358,7 +429,16 @@
     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
     font-size:.75rem;
     color:var(--muted);
-    margin-bottom:10px;
+    margin-bottom:14px;
+  }
+  .modal-field-label{
+    display:block;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:.68rem;
+    text-transform:uppercase;
+    letter-spacing:1px;
+    color:var(--muted);
+    margin-bottom:6px;
   }
   #exportText{
     flex:1;
@@ -413,12 +493,58 @@
   <div class="modal-overlay" id="exportOverlay">
     <div class="modal-box">
       <div class="modal-title">Exportar histórico</div>
-      <div class="modal-sub">Texto separado por Colic Calm, Simeticona e mamadas. Copie ou baixe como arquivo.</div>
+      <div class="modal-sub">Texto separado por medicamento e mamadas. Copie ou baixe como arquivo.</div>
       <textarea id="exportText" readonly></textarea>
       <div class="modal-actions">
         <button id="copyExportBtn" class="modal-btn primary">Copiar</button>
         <button id="downloadExportBtn" class="modal-btn primary">Baixar .txt</button>
         <button id="closeExportBtn" class="modal-btn">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="medOverlay">
+    <div class="modal-box">
+      <div class="modal-title">Novo medicamento</div>
+      <div class="modal-sub">Defina o intervalo mínimo entre doses e, se houver, o limite diário.</div>
+      <label class="modal-field-label">Nome</label>
+      <input type="text" id="medNameInput" placeholder="ex: Vitamina D" style="margin-bottom:12px;">
+      <div class="row">
+        <div class="field">
+          <label>Intervalo entre doses (h)</label>
+          <input type="number" id="medIntervalInput" placeholder="ex: 1" min="0.5" step="0.5">
+        </div>
+        <div class="field">
+          <label>Limite em 24h (opcional)</label>
+          <input type="number" id="medMaxInput" placeholder="sem limite" min="1" step="1">
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="saveMedBtn" class="modal-btn primary">Adicionar</button>
+        <button id="cancelMedBtn" class="modal-btn">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="formulaOverlay">
+    <div class="modal-box">
+      <div class="modal-title">Configurar dose de fórmula</div>
+      <div class="modal-sub">Ajuste a dose máxima que o bebê costuma tomar e o intervalo entre as opções rápidas.</div>
+      <label class="modal-field-label">Dose máxima (ml)</label>
+      <div class="stepper-row">
+        <button class="stepper-btn" data-target="cfgMax" data-delta="-10">−10</button>
+        <input type="number" id="cfgMax" class="stepper-input" min="10" step="10">
+        <button class="stepper-btn" data-target="cfgMax" data-delta="10">+10</button>
+      </div>
+      <label class="modal-field-label">Intervalo entre as opções (ml)</label>
+      <div class="stepper-row">
+        <button class="stepper-btn" data-target="cfgStep" data-delta="-10">−10</button>
+        <input type="number" id="cfgStep" class="stepper-input" min="5" step="5">
+        <button class="stepper-btn" data-target="cfgStep" data-delta="10">+10</button>
+      </div>
+      <div class="modal-actions">
+        <button id="saveFormulaCfgBtn" class="modal-btn primary">Salvar</button>
+        <button id="cancelFormulaCfgBtn" class="modal-btn">Cancelar</button>
       </div>
     </div>
   </div>
@@ -436,27 +562,11 @@
   </div>
 
   <div class="card">
-    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:.68rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px;">Medicamentos</div>
-    <div class="med-grid">
-      <div class="med-box">
-        <div class="med-name">Colic Calm</div>
-        <div class="med-next" id="nextColic">—</div>
-        <div class="med-count" id="countColic">—</div>
-        <div class="row" style="margin:8px 0 0;">
-          <input type="time" id="colicTime" style="flex:1;">
-          <button class="med-btn colic" id="logColic">Registrar</button>
-        </div>
-      </div>
-      <div class="med-box">
-        <div class="med-name">Simeticona</div>
-        <div class="med-next" id="nextSimet">—</div>
-        <div class="med-count" id="countSimet">—</div>
-        <div class="row" style="margin:8px 0 0;">
-          <input type="time" id="simetTime" style="flex:1;">
-          <button class="med-btn simet" id="logSimet">Registrar</button>
-        </div>
-      </div>
+    <div class="section-head">
+      <div class="section-label">Medicamentos</div>
+      <button id="addMedBtn" class="mini-btn" aria-label="Adicionar medicamento">＋ Adicionar</button>
     </div>
+    <div class="med-grid" id="medGrid"></div>
   </div>
 
   <div class="card">
@@ -478,21 +588,12 @@
     </div>
 
     <div id="formulaBlock">
-      <label style="display:block;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:.68rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:5px;">Fórmula (ml) · meta até 80ml</label>
-      <input type="number" id="mlInput" placeholder="0" min="0" max="200">
-      <div class="ml-quick" id="mlQuick">
-        <button data-ml="30">30</button>
-        <button data-ml="35">35</button>
-        <button data-ml="40">40</button>
-        <button data-ml="45">45</button>
-        <button data-ml="50">50</button>
-        <button data-ml="55">55</button>
-        <button data-ml="60">60</button>
-        <button data-ml="65">65</button>
-        <button data-ml="70">70</button>
-        <button data-ml="75">75</button>
-        <button data-ml="80">80</button>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:5px;">
+        <label style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:.68rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);">Fórmula (ml) · meta até <span id="goalMaxLabel">80</span>ml</label>
+        <button id="configFormulaBtn" class="mini-btn" aria-label="Configurar dose de fórmula">Configurar</button>
       </div>
+      <input type="number" id="mlInput" placeholder="0" min="0" max="300">
+      <div class="ml-quick" id="mlQuick"></div>
       <div class="goal-bar"><div id="goalFill" style="width:0%"></div></div>
       <div class="goal-label" id="goalLabel">0 de 80ml</div>
     </div>
@@ -514,7 +615,13 @@
 
 <script>
 const STORAGE_KEY = 'ravi-mamadas';
+const MED_STORAGE_KEY = 'ravi-meds';
+const FORMULA_CFG_KEY = 'ravi-formula-config';
+const MED_COLORS = ['#c98a3b','#3d574c','#5c7c6f','#b2543f','#8b6f47','#4a6fa5','#a85f8a','#5f8a7a'];
+
 let entries = [];
+let meds = [];
+let formulaConfig = { max: 80, step: 10 };
 let tipo = 'peito';
 
 const tipoSeg = document.getElementById('tipoSeg');
@@ -523,11 +630,17 @@ const mlInput = document.getElementById('mlInput');
 const mlQuick = document.getElementById('mlQuick');
 const goalFill = document.getElementById('goalFill');
 const goalLabel = document.getElementById('goalLabel');
+const goalMaxLabel = document.getElementById('goalMaxLabel');
 const inicioEl = document.getElementById('inicio');
 const terminoEl = document.getElementById('termino');
 const obsEl = document.getElementById('obs');
 const historyEl = document.getElementById('history');
 const statusEl = document.getElementById('status');
+const medGrid = document.getElementById('medGrid');
+
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
 
 function nowHM(){
   const d = new Date();
@@ -559,10 +672,64 @@ mlInput.addEventListener('input', ()=>{
 });
 function updateGoal(){
   const v = Math.max(0, parseInt(mlInput.value)||0);
-  const pct = Math.min(100, (v/80)*100);
+  const pct = Math.min(100, (v/formulaConfig.max)*100);
   goalFill.style.width = pct+'%';
-  goalLabel.textContent = v+' de 80ml';
+  goalLabel.textContent = v+' de '+formulaConfig.max+'ml';
 }
+
+function renderMlQuick(){
+  const opts = [];
+  for(let v = formulaConfig.step; v < formulaConfig.max; v += formulaConfig.step){
+    opts.push(v);
+  }
+  opts.push(formulaConfig.max);
+  mlQuick.innerHTML = opts.map(v=>`<button data-ml="${v}">${v}</button>`).join('');
+  goalMaxLabel.textContent = formulaConfig.max;
+}
+
+function loadFormulaConfig(){
+  try{
+    const raw = localStorage.getItem(FORMULA_CFG_KEY);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      if(parsed && parsed.max > 0 && parsed.step > 0){ formulaConfig = parsed; return; }
+    }
+  }catch(e){}
+  formulaConfig = { max: 80, step: 10 };
+}
+function persistFormulaConfig(){
+  localStorage.setItem(FORMULA_CFG_KEY, JSON.stringify(formulaConfig));
+}
+
+document.querySelectorAll('.stepper-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const input = document.getElementById(btn.dataset.target);
+    const delta = parseInt(btn.dataset.delta);
+    const min = parseInt(input.min) || 0;
+    const next = Math.max(min, (parseInt(input.value)||0) + delta);
+    input.value = next;
+  });
+});
+
+const formulaOverlay = document.getElementById('formulaOverlay');
+document.getElementById('configFormulaBtn').addEventListener('click', ()=>{
+  document.getElementById('cfgMax').value = formulaConfig.max;
+  document.getElementById('cfgStep').value = formulaConfig.step;
+  formulaOverlay.classList.add('show');
+});
+document.getElementById('cancelFormulaCfgBtn').addEventListener('click', ()=>{
+  formulaOverlay.classList.remove('show');
+});
+document.getElementById('saveFormulaCfgBtn').addEventListener('click', ()=>{
+  const max = Math.max(10, parseInt(document.getElementById('cfgMax').value) || 80);
+  const step = Math.max(5, parseInt(document.getElementById('cfgStep').value) || 10);
+  formulaConfig = { max, step };
+  persistFormulaConfig();
+  renderMlQuick();
+  updateGoal();
+  formulaOverlay.classList.remove('show');
+  showStatus('Configuração salva');
+});
 
 function showStatus(msg){
   statusEl.textContent = msg;
@@ -646,42 +813,136 @@ function tipoLabel(e){
   return 'Peito + fórmula';
 }
 
-document.getElementById('colicTime').value = nowHM();
-document.getElementById('simetTime').value = nowHM();
+// ---- Medicamentos ----
 
-document.getElementById('logColic').addEventListener('click', ()=> logMed('Colic Calm', 'colicTime'));
-document.getElementById('logSimet').addEventListener('click', ()=> logMed('Simeticona', 'simetTime'));
+function loadMeds(){
+  try{
+    const raw = localStorage.getItem(MED_STORAGE_KEY);
+    if(raw){ meds = JSON.parse(raw); return; }
+  }catch(e){}
+  meds = [
+    { id:'colic-calm', name:'Colic Calm', intervalMin:60, maxPerDay:4, color:MED_COLORS[0] },
+    { id:'simeticona', name:'Simeticona', intervalMin:240, maxPerDay:null, color:MED_COLORS[1] }
+  ];
+  persistMeds();
+}
+function persistMeds(){
+  localStorage.setItem(MED_STORAGE_KEY, JSON.stringify(meds));
+}
 
-function logMed(medName, inputId){
-  const timeVal = document.getElementById(inputId).value || nowHM();
+function medDosesFor(med){
+  return entries.filter(e=> e.kind==='med' && (e.medId===med.id || (!e.medId && e.medName===med.name)));
+}
+function medColorFor(entry){
+  const m = meds.find(x=> (entry.medId && x.id===entry.medId) || x.name===entry.medName);
+  return m ? m.color : '#8b9089';
+}
+
+function renderMedGrid(){
+  if(meds.length===0){
+    medGrid.innerHTML = '<div class="empty" style="padding:14px 4px;width:100%;">Nenhum medicamento configurado. Toque em "＋ Adicionar" para criar um.</div>';
+    return;
+  }
+  medGrid.innerHTML = meds.map(m=>`
+    <div class="med-box">
+      <div class="med-head">
+        <div class="med-name">${escapeHtml(m.name)}</div>
+        <button class="med-del" data-id="${m.id}" aria-label="Remover medicamento">✕</button>
+      </div>
+      <div class="med-next" id="next-${m.id}">—</div>
+      <div class="med-count" id="count-${m.id}">—</div>
+      <div class="row" style="margin:8px 0 0;">
+        <input type="time" id="time-${m.id}" style="flex:1;">
+        <button class="med-btn" data-id="${m.id}" style="background:${m.color};">Registrar</button>
+      </div>
+    </div>
+  `).join('');
+
+  meds.forEach(m=>{
+    const timeEl = document.getElementById('time-'+m.id);
+    if(timeEl) timeEl.value = nowHM();
+  });
+  medGrid.querySelectorAll('.med-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=> logMed(btn.dataset.id));
+  });
+  medGrid.querySelectorAll('.med-del').forEach(btn=>{
+    btn.addEventListener('click', ()=> removeMed(btn.dataset.id));
+  });
+}
+
+const medOverlay = document.getElementById('medOverlay');
+document.getElementById('addMedBtn').addEventListener('click', ()=>{
+  document.getElementById('medNameInput').value = '';
+  document.getElementById('medIntervalInput').value = '';
+  document.getElementById('medMaxInput').value = '';
+  medOverlay.classList.add('show');
+});
+document.getElementById('cancelMedBtn').addEventListener('click', ()=>{
+  medOverlay.classList.remove('show');
+});
+document.getElementById('saveMedBtn').addEventListener('click', ()=>{
+  const name = document.getElementById('medNameInput').value.trim();
+  if(!name){ showStatus('Informe o nome do medicamento'); return; }
+  const hours = parseFloat(document.getElementById('medIntervalInput').value);
+  if(!hours || hours<=0){ showStatus('Informe o intervalo entre doses'); return; }
+  const maxRaw = document.getElementById('medMaxInput').value;
+  const maxPerDay = maxRaw ? Math.max(1, parseInt(maxRaw)) : null;
+
+  const med = {
+    id: 'med-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),
+    name,
+    intervalMin: Math.round(hours*60),
+    maxPerDay,
+    color: MED_COLORS[meds.length % MED_COLORS.length]
+  };
+  meds.push(med);
+  persistMeds();
+  renderMedGrid();
+  updateMedNext();
+  medOverlay.classList.remove('show');
+  showStatus('Medicamento adicionado');
+});
+
+function removeMed(id){
+  const med = meds.find(m=>m.id===id);
+  if(!med) return;
+  if(!confirm('Remover "'+med.name+'"? O histórico de doses já registradas continua salvo.')) return;
+  meds = meds.filter(m=>m.id!==id);
+  persistMeds();
+  renderMedGrid();
+  showStatus('Medicamento removido');
+}
+
+function logMed(medId){
+  const med = meds.find(m=>m.id===medId);
+  if(!med) return;
+  const inputEl = document.getElementById('time-'+medId);
+  const timeVal = (inputEl && inputEl.value) || nowHM();
   const entry = {
     id: Date.now()+'-'+Math.random().toString(36).slice(2,7),
     dateKey: selectedDateKey(),
     dateLabel: selectedDateLabel(),
     kind: 'med',
-    medName,
+    medId: med.id,
+    medName: med.name,
     inicio: timeVal,
     createdAt: new Date().toISOString()
   };
   entries.unshift(entry);
   persist();
   render();
-  showStatus(medName + ' registrado');
-  document.getElementById(inputId).value = nowHM();
+  showStatus(med.name + ' registrado');
+  if(inputEl) inputEl.value = nowHM();
 }
-
-const MED_INTERVAL_MIN = { 'Colic Calm': 60, 'Simeticona': 240 };
-const MED_MAX_24H = { 'Colic Calm': 4 }; // Simeticona: sem limite diário definido na receita, só intervalo
 
 function updateMedNext(){
   const now = new Date();
-  ['Colic Calm','Simeticona'].forEach(medName=>{
-    const nextId = medName==='Colic Calm' ? 'nextColic' : 'nextSimet';
-    const countId = medName==='Colic Calm' ? 'countColic' : 'countSimet';
-    const nextEl = document.getElementById(nextId);
-    const countEl = document.getElementById(countId);
+  meds.forEach(m=>{
+    const nextEl = document.getElementById('next-'+m.id);
+    const countEl = document.getElementById('count-'+m.id);
+    if(!nextEl || !countEl) return;
 
-    const doses = entries.filter(e=> e.kind==='med' && e.medName===medName);
+    const doses = medDosesFor(m);
     if(doses.length===0){
       nextEl.textContent = 'nenhuma dose registrada ainda';
       nextEl.className = 'med-next';
@@ -692,7 +953,7 @@ function updateMedNext(){
     const sorted = [...doses].sort((a,b)=> entryTimestamp(b) - entryTimestamp(a));
     const last = sorted[0];
     const lastTs = entryTimestamp(last);
-    const nextTs = new Date(lastTs.getTime() + MED_INTERVAL_MIN[medName]*60000);
+    const nextTs = new Date(lastTs.getTime() + m.intervalMin*60000);
     const hh = String(nextTs.getHours()).padStart(2,'0');
     const mm = String(nextTs.getMinutes()).padStart(2,'0');
     const diffMin = Math.round((nextTs-now)/60000);
@@ -714,12 +975,11 @@ function updateMedNext(){
     const last24 = doses.filter(e=> entryTimestamp(e) >= cutoff && entryTimestamp(e) <= now);
     const usedCount = last24.length;
 
-    if(MED_MAX_24H[medName]){
-      const max = MED_MAX_24H[medName];
-      const remaining = Math.max(0, max - usedCount);
-      countEl.textContent = usedCount+' de '+max+' doses nas últimas 24h · restam '+remaining;
+    if(m.maxPerDay){
+      const remaining = Math.max(0, m.maxPerDay - usedCount);
+      countEl.textContent = usedCount+' de '+m.maxPerDay+' doses nas últimas 24h · restam '+remaining;
     } else {
-      countEl.textContent = usedCount+' dose'+(usedCount!==1?'s':'')+' nas últimas 24h (sem limite diário na receita)';
+      countEl.textContent = usedCount+' dose'+(usedCount!==1?'s':'')+' nas últimas 24h (sem limite diário)';
     }
   });
 }
@@ -798,13 +1058,13 @@ function render(){
     html += `<div class="day-heading"><span>${label}</span><span class="tot">${totalMl}ml fórmula · ${feedCount} mamada${feedCount!==1?'s':''} · ${medCount} dose${medCount!==1?'s':''}</span></div>`;
     list.forEach(e=>{
       if(e.kind==='med'){
-        const medCls = e.medName==='Colic Calm' ? 'med-colic' : 'med-simet';
+        const color = medColorFor(e);
         html += `
-          <div class="entry ${medCls}">
-            <div class="dot"></div>
+          <div class="entry">
+            <div class="dot" style="background:${color};"></div>
             <div class="info">
               <div class="time">${e.inicio}</div>
-              <div class="meta">${e.medName}</div>
+              <div class="meta">${escapeHtml(e.medName)}</div>
             </div>
             <button class="del" data-id="${e.id}" aria-label="Excluir">✕</button>
           </div>`;
@@ -814,7 +1074,7 @@ function render(){
       const timeStr = e.termino ? `${e.inicio} – ${e.termino}` : `${e.inicio} (início)`;
       const mlTag = (e.ml!==null && e.ml!==undefined) ? `<div class="ml-tag">${e.ml}ml</div>` : '';
       const metaParts = [tipoLabel(e)];
-      if(e.obs) metaParts.push(e.obs);
+      if(e.obs) metaParts.push(escapeHtml(e.obs));
       html += `
         <div class="entry ${cls}">
           <div class="dot"></div>
@@ -871,23 +1131,33 @@ document.getElementById('downloadExportBtn').addEventListener('click', ()=>{
 
 function buildExportText(){
   const byDateTimeAsc = (a,b)=> entryTimestamp(a) - entryTimestamp(b);
-
-  const colic = entries.filter(e=> e.kind==='med' && e.medName==='Colic Calm').sort(byDateTimeAsc);
-  const simet = entries.filter(e=> e.kind==='med' && e.medName==='Simeticona').sort(byDateTimeAsc);
-  const feeds = entries.filter(e=> e.kind!=='med').sort(byDateTimeAsc);
-
   const lines = [];
   lines.push('CONTROLE DE MAMADAS E MEDICAMENTOS — RAVI');
   lines.push('Exportado em ' + new Date().toLocaleString('pt-BR'));
   lines.push('');
-  lines.push('=== COLIC CALM ('+colic.length+' doses) ===');
-  if(colic.length===0){ lines.push('(nenhum registro)'); }
-  colic.forEach(e=> lines.push(e.dateLabel+' '+e.inicio));
-  lines.push('');
-  lines.push('=== SIMETICONA ('+simet.length+' doses) ===');
-  if(simet.length===0){ lines.push('(nenhum registro)'); }
-  simet.forEach(e=> lines.push(e.dateLabel+' '+e.inicio));
-  lines.push('');
+
+  meds.forEach(m=>{
+    const doses = medDosesFor(m).sort(byDateTimeAsc);
+    lines.push('=== '+m.name.toUpperCase()+' ('+doses.length+' doses) ===');
+    if(doses.length===0){ lines.push('(nenhum registro)'); }
+    doses.forEach(e=> lines.push(e.dateLabel+' '+e.inicio));
+    lines.push('');
+  });
+
+  // doses de medicamentos que já foram removidos da configuração, mas continuam no histórico
+  const knownIds = new Set(meds.map(m=>m.id));
+  const knownNames = new Set(meds.map(m=>m.name));
+  const orphanDoses = entries.filter(e=> e.kind==='med' && !((e.medId && knownIds.has(e.medId)) || (!e.medId && knownNames.has(e.medName))));
+  const orphanByName = {};
+  orphanDoses.forEach(e=>{ (orphanByName[e.medName] ||= []).push(e); });
+  Object.keys(orphanByName).forEach(name=>{
+    const doses = orphanByName[name].sort(byDateTimeAsc);
+    lines.push('=== '+name.toUpperCase()+' (removido · '+doses.length+' doses) ===');
+    doses.forEach(e=> lines.push(e.dateLabel+' '+e.inicio));
+    lines.push('');
+  });
+
+  const feeds = entries.filter(e=> e.kind!=='med').sort(byDateTimeAsc);
   lines.push('=== MAMADAS ('+feeds.length+') ===');
   if(feeds.length===0){ lines.push('(nenhum registro)'); }
   feeds.forEach(e=>{
@@ -901,6 +1171,10 @@ function buildExportText(){
   return lines.join('\n');
 }
 
+loadMeds();
+loadFormulaConfig();
+renderMedGrid();
+renderMlQuick();
 updateGoal();
 loadEntries();
 setInterval(()=>{ updateNextEstimate(); updateMedNext(); }, 60000);
