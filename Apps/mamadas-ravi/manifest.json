@@ -1,0 +1,19 @@
+{
+  "name": "Mamadas do Ravi",
+  "short_name": "Mamadas Ravi",
+  "description": "Registro rápido de mamadas e medicamentos, com histórico e exportação.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f3ec",
+  "theme_color": "#3d574c",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
