@@ -657,23 +657,35 @@
 
   <div class="modal-overlay" id="growthOverlay">
     <div class="modal-box">
-      <div class="modal-title">Registrar peso/altura</div>
-      <div class="modal-sub">Preencha ao menos um dos dois campos.</div>
+      <div class="modal-title" id="growthModalTitle">Registrar peso/altura</div>
+      <div class="modal-sub">Preencha ao menos um dos dois campos. Pode usar ponto ou vírgula pra casa decimal, tanto faz.</div>
       <label class="modal-field-label">Data</label>
       <input type="date" id="growthDate" style="margin-bottom:12px;">
       <div class="row">
         <div class="field">
           <label>Peso (kg)</label>
-          <input type="number" id="growthWeight" placeholder="ex: 4.250" step="0.001" min="0">
+          <input type="text" inputmode="decimal" id="growthWeight" placeholder="ex: 4.250 ou 4,250">
         </div>
         <div class="field">
           <label>Altura (cm)</label>
-          <input type="number" id="growthHeight" placeholder="ex: 55" step="0.5" min="0">
+          <input type="text" inputmode="decimal" id="growthHeight" placeholder="ex: 55">
         </div>
       </div>
       <div class="modal-actions">
         <button id="saveGrowthBtn" class="modal-btn primary">Salvar</button>
+        <button id="deleteGrowthBtn" class="modal-btn" style="display:none;">Excluir</button>
         <button id="cancelGrowthBtn" class="modal-btn">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="growthHistoryOverlay">
+    <div class="modal-box">
+      <div class="modal-title">Histórico de peso/altura</div>
+      <div class="modal-sub">Toque em "✎" para corrigir um registro.</div>
+      <div id="growthHistoryList"></div>
+      <div class="modal-actions">
+        <button id="closeGrowthHistoryBtn" class="modal-btn">Fechar</button>
       </div>
     </div>
   </div>
@@ -715,7 +727,8 @@
   <div class="card">
     <div class="section-head">
       <div class="section-label">Crescimento</div>
-      <div style="display:flex;gap:8px;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+        <button id="viewGrowthHistoryBtn" class="mini-btn">Histórico</button>
         <button id="viewGrowthChartBtn" class="mini-btn">Gráfico</button>
         <button id="addGrowthBtn" class="mini-btn">＋ Registrar</button>
       </div>
@@ -1479,7 +1492,17 @@ function renderGrowthSummary(){
     box('Peso', weightPoints, 'kg', 3) + box('Altura', heightPoints, 'cm', 0);
 }
 
+function parseDecimal(str){
+  if(!str) return NaN;
+  return parseFloat(String(str).trim().replace(',', '.'));
+}
+
+let editingGrowthId = null;
+
 document.getElementById('addGrowthBtn').addEventListener('click', ()=>{
+  editingGrowthId = null;
+  document.getElementById('growthModalTitle').textContent = 'Registrar peso/altura';
+  document.getElementById('deleteGrowthBtn').style.display = 'none';
   document.getElementById('growthDate').value = todayKey();
   document.getElementById('growthWeight').value = '';
   document.getElementById('growthHeight').value = '';
@@ -1492,23 +1515,95 @@ document.getElementById('saveGrowthBtn').addEventListener('click', ()=>{
   const dateKey = document.getElementById('growthDate').value || todayKey();
   const weightRaw = document.getElementById('growthWeight').value;
   const heightRaw = document.getElementById('growthHeight').value;
-  const weightKg = weightRaw ? parseFloat(weightRaw) : null;
-  const heightCm = heightRaw ? parseFloat(heightRaw) : null;
+  const weightKg = weightRaw ? parseDecimal(weightRaw) : null;
+  const heightCm = heightRaw ? parseDecimal(heightRaw) : null;
   if((weightKg===null || isNaN(weightKg)) && (heightCm===null || isNaN(heightCm))){
     showStatus('Preencha peso ou altura');
     return;
   }
-  growth.push({
-    id: 'g-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),
+  const data = {
     dateKey,
-    weightKg: isNaN(weightKg) ? null : weightKg,
-    heightCm: isNaN(heightCm) ? null : heightCm,
-    createdAt: new Date().toISOString()
-  });
+    weightKg: (weightKg===null || isNaN(weightKg)) ? null : weightKg,
+    heightCm: (heightCm===null || isNaN(heightCm)) ? null : heightCm
+  };
+
+  if(editingGrowthId){
+    const idx = growth.findIndex(g=>g.id===editingGrowthId);
+    if(idx!==-1) growth[idx] = { ...growth[idx], ...data };
+  } else {
+    growth.push({
+      id: 'g-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),
+      ...data,
+      createdAt: new Date().toISOString()
+    });
+  }
   persistGrowth();
   renderGrowthSummary();
+  renderGrowthHistoryList();
   document.getElementById('growthOverlay').classList.remove('show');
   showStatus('Registro salvo');
+});
+
+function openGrowthEditModal(id){
+  const g = growth.find(x=>x.id===id);
+  if(!g) return;
+  editingGrowthId = id;
+  document.getElementById('growthModalTitle').textContent = 'Editar registro';
+  document.getElementById('deleteGrowthBtn').style.display = 'block';
+  document.getElementById('growthDate').value = g.dateKey;
+  document.getElementById('growthWeight').value = (g.weightKg!==null && g.weightKg!==undefined) ? g.weightKg : '';
+  document.getElementById('growthHeight').value = (g.heightCm!==null && g.heightCm!==undefined) ? g.heightCm : '';
+  document.getElementById('growthOverlay').classList.add('show');
+}
+
+document.getElementById('deleteGrowthBtn').addEventListener('click', ()=>{
+  if(!editingGrowthId) return;
+  if(!confirm('Excluir esse registro de peso/altura?')) return;
+  growth = growth.filter(g=>g.id!==editingGrowthId);
+  persistGrowth();
+  renderGrowthSummary();
+  renderGrowthHistoryList();
+  document.getElementById('growthOverlay').classList.remove('show');
+  showStatus('Registro excluído');
+});
+
+function renderGrowthHistoryList(){
+  const listEl = document.getElementById('growthHistoryList');
+  if(growth.length===0){
+    listEl.innerHTML = '<div class="empty" style="padding:16px 0;">Nenhum registro ainda.</div>';
+    return;
+  }
+  const sorted = [...growth].sort((a,b)=> b.dateKey.localeCompare(a.dateKey));
+  listEl.innerHTML = sorted.map(g=>{
+    const parts = [];
+    if(g.weightKg!==null && g.weightKg!==undefined) parts.push(g.weightKg.toFixed(3)+'kg');
+    if(g.heightCm!==null && g.heightCm!==undefined) parts.push(g.heightCm+'cm');
+    return `
+      <div class="entry">
+        <div class="dot"></div>
+        <div class="info">
+          <div class="time">${dateLabelFor(g.dateKey)}</div>
+          <div class="meta">${parts.join(' · ')}</div>
+        </div>
+        <div class="entry-actions">
+          <button class="edit" data-id="${g.id}" aria-label="Editar">✎</button>
+        </div>
+      </div>`;
+  }).join('');
+  listEl.querySelectorAll('.edit').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.getElementById('growthHistoryOverlay').classList.remove('show');
+      openGrowthEditModal(btn.dataset.id);
+    });
+  });
+}
+
+document.getElementById('viewGrowthHistoryBtn').addEventListener('click', ()=>{
+  renderGrowthHistoryList();
+  document.getElementById('growthHistoryOverlay').classList.add('show');
+});
+document.getElementById('closeGrowthHistoryBtn').addEventListener('click', ()=>{
+  document.getElementById('growthHistoryOverlay').classList.remove('show');
 });
 
 function buildLineChartSvg(points, color){
