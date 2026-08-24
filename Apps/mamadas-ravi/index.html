@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Controle de mamadas — Ravi</title>
+<meta name="theme-color" content="#3d574c">
+<meta name="description" content="Registro rápido de mamadas e medicamentos do Ravi, com histórico, exportação e funcionamento offline.">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mamadas Ravi">
+<style>
+  :root{
+    --ink:#1f2b28;
+    --paper:#f6f3ec;
+    --panel:#ffffff;
+    --line:#e2ddd0;
+    --sage:#5c7c6f;
+    --sage-deep:#3d574c;
+    --amber:#c98a3b;
+    --amber-soft:#f3e2c4;
+    --milk:#eef1ea;
+    --danger:#b2543f;
+    --muted:#8b9089;
+    font-size:16px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Iowan Old Style','Georgia',serif;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .wrap{
+    max-width:520px;
+    margin:0 auto;
+    padding:20px 16px 80px;
+  }
+  header{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    padding:6px 2px 18px;
+    border-bottom:1px solid var(--line);
+    margin-bottom:18px;
+  }
+  header h1{
+    font-size:1.35rem;
+    margin:0;
+    font-weight:600;
+    letter-spacing:.2px;
+  }
+  header .sub{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:.72rem;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:1.2px;
+  }
+
+  .card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:16px;
+    margin-bottom:16px;
+  }
+
+  .seg{
+    display:flex;
+    gap:8px;
+    margin-bottom:14px;
+  }
+  .seg button{
+    flex:1;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:.85rem;
+    font-weight:600;
+    padding:11px 4px;
+    border-radius:10px;
+    border:1.5px solid var(--line);
+    background:var(--milk);
+    color:var(--sage-deep);
+    cursor:pointer;
+  }
+  .seg button.active{
+    background:var(--sage-deep);
+    border-color:var(--sage-deep);
+    color:#fff;
+  }
+
+  .row{
+    display:flex;
+    gap:10px;
+    margin-bottom:12px;
+  }
+  .field{
+    flex:1;
+  }
+  .field label{
+    display:block;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:.68rem;
+    text-transform:uppercase;
+    letter-spacing:1px;
+    color:var(--muted);
+    margin-bottom:5px;
+  }
+  input[type=time], input[type=number], input[type=text]{
+    width:100%;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:1rem;
+    padding:10px 10px;
+    border-radius:9px;
+    border:1.5px solid var(--line);
+    background:var(--paper);
+    color:var(--ink);
+  }
+  input:focus{outline:2px solid var(--sage); outline-offset:1px;}
+
+  .ml-quick{
+    display:flex;
+    flex-wrap:wrap;
+    gap:7px;
+    margin:10px 0 4px;
+  }
+  .ml-quick button{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:.82rem;
+    font-weight:600;
+    padding:8px 13px;
+    border-radius:20px;
+    border:1.5px solid var(--amber);
+    background:var(--amber-soft);
+    color:#7a4f1e;
+    cursor:pointer;
+  }
+  .ml-quick button.active{
+    background:var(--amber);
+    color:#fff;
+  }
+
+  .goal-bar{
+    height:8px;
+    border-radius:5px;
+    background:var(--milk);
+    overflow:hidden;
+    margin-top:8px;
+  }
+  .goal-bar > div{
+    height:100%;
+    background:var(--amber);
+    transition:width .25s ease;
+  }
+  .goal-label{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:.72rem;
+    color:var(--muted);
+    margin-top:5px;
+  }
+
+  .save-btn{
+    width:100%;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:1rem;
+    font-weight:700;
+    padding:14px;
+    border-radius:11px;
+    border:none;
+    background:var(--sage-deep);
+    color:#fff;
+    cursor:pointer;
+    margin-top:4px;
+  }
+  .save-btn:active{ background:var(--sage); }
+
+  .med-grid{
+    display:flex;
+    gap:10px;
+  }
+  .med-box{
+    flex:1;
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:11px;
+    padding:11px;
+  }
+  .med-name{
+    font-weight:700;
+    font-size:.92rem;
+  }
+  .med-next{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:.74rem;
+    color:var(--muted);
+    margin-top:3px;
+  }
+  .med-next.ready{ color:var(--sage-deep); font-weight:700; }
+  .med-next.waiting{ color:var(--amber); font-weight:700; }
+  .med-count{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:.7rem;
+    color:var(--muted);
+    margin-top:4px;
+    padding-top:4px;
+    border-top:1px dashed var(--line);
+  }
+  .med-btn{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:.78rem;
+    font-weight:700;
+    padding:9px 10px;
+    border-radius:8px;
+    border:none;
+    color:#fff;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .med-btn.colic{ background:var(--amber); }
+  .med-btn.simet{ background:var(--sage-deep); }
+
+  .day-heading{
+    font-size:.95rem;
+    font-weight:700;
+    color:var(--sage-deep);
+    margin:22px 2px 8px;
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+  }
+  .day-heading .tot{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:.72rem;
+    font-weight:600;
+    color:var(--amber);
+    text-transform:none;
+  }
+
+  .entry{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:11px 12px;
+    margin-bottom:8px;
+  }
+  .entry .dot{
+    width:9px;height:9px;border-radius:50%;
+    flex-shrink:0;
+    background:var(--sage);
+  }
+  .entry.formula .dot{ background:var(--amber); }
+  .entry.mix .dot{ background:linear-gradient(135deg,var(--sage) 50%,var(--amber) 50%); }
+  .entry.med-colic .dot{ background:#c98a3b; }
+  .entry.med-simet .dot{ background:#3d574c; }
+  .entry .info{ flex:1; min-width:0; }
+  .entry .time{
+    font-weight:700;
+    font-size:.95rem;
+  }
+  .entry .meta{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:.75rem;
+    color:var(--muted);
+    margin-top:2px;
+  }
+  .entry .ml-tag{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:.82rem;
+    font-weight:700;
+    color:var(--amber);
+    white-space:nowrap;
+  }
+  .entry .del{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:1.1rem;
+    color:var(--line);
+    background:none;
+    border:none;
+    cursor:pointer;
+    padding:2px 4px;
+    line-height:1;
+  }
+  .entry .del:active{ color:var(--danger); }
+
+  .empty{
+    text-align:center;
+    color:var(--muted);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:.85rem;
+    padding:30px 10px;
+  }
+
+  .status{
+    position:fixed;
+    left:50%; bottom:18px;
+    transform:translateX(-50%) translateY(20px);
+    background:var(--sage-deep);
+    color:#fff;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:.8rem;
+    padding:9px 18px;
+    border-radius:20px;
+    opacity:0;
+    transition:opacity .25s ease, transform .25s ease;
+    pointer-events:none;
+  }
+  .status.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  .export-btn{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:.75rem;
+    font-weight:700;
+    padding:8px 14px;
+    border-radius:20px;
+    border:1.5px solid var(--sage-deep);
+    background:transparent;
+    color:var(--sage-deep);
+    cursor:pointer;
+    white-space:nowrap;
+    align-self:flex-start;
+  }
+  .export-btn:active{ background:var(--sage-deep); color:#fff; }
+
+  .modal-overlay{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(31,43,40,.55);
+    z-index:50;
+    padding:16px;
+    align-items:center;
+    justify-content:center;
+  }
+  .modal-overlay.show{ display:flex; }
+  .modal-box{
+    background:var(--panel);
+    border-radius:14px;
+    padding:18px;
+    width:100%;
+    max-width:480px;
+    max-height:85vh;
+    display:flex;
+    flex-direction:column;
+  }
+  .modal-title{
+    font-size:1.1rem;
+    font-weight:700;
+    margin-bottom:4px;
+  }
+  .modal-sub{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:.75rem;
+    color:var(--muted);
+    margin-bottom:10px;
+  }
+  #exportText{
+    flex:1;
+    min-height:280px;
+    width:100%;
+    font-family:'SF Mono','Menlo',monospace;
+    font-size:.78rem;
+    line-height:1.5;
+    padding:10px;
+    border-radius:9px;
+    border:1.5px solid var(--line);
+    background:var(--paper);
+    color:var(--ink);
+    resize:vertical;
+  }
+  .modal-actions{
+    display:flex;
+    gap:8px;
+    margin-top:12px;
+    flex-wrap:wrap;
+  }
+  .modal-btn{
+    flex:1;
+    min-width:90px;
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    font-size:.82rem;
+    font-weight:700;
+    padding:11px 8px;
+    border-radius:9px;
+    border:1.5px solid var(--line);
+    background:var(--milk);
+    color:var(--sage-deep);
+    cursor:pointer;
+  }
+  .modal-btn.primary{
+    background:var(--sage-deep);
+    border-color:var(--sage-deep);
+    color:#fff;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Mamadas do Ravi</h1>
+      <div class="sub">registro rápido</div>
+    </div>
+    <button id="exportBtn" class="export-btn" aria-label="Exportar histórico">Exportar</button>
+  </header>
+
+  <div class="modal-overlay" id="exportOverlay">
+    <div class="modal-box">
+      <div class="modal-title">Exportar histórico</div>
+      <div class="modal-sub">Texto separado por Colic Calm, Simeticona e mamadas. Copie ou baixe como arquivo.</div>
+      <textarea id="exportText" readonly></textarea>
+      <div class="modal-actions">
+        <button id="copyExportBtn" class="modal-btn primary">Copiar</button>
+        <button id="downloadExportBtn" class="modal-btn primary">Baixar .txt</button>
+        <button id="closeExportBtn" class="modal-btn">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="dateCard">
+    <label style="display:block;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:.68rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:6px;">Data do registro</label>
+    <input type="date" id="dataInput">
+    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:.7rem;color:var(--muted);margin-top:6px;">Vale para as mamadas e medicamentos registrados abaixo. Ajuste se estiver registrando algo de um dia anterior.</div>
+  </div>
+
+  <div class="card" id="nextCard" style="display:none;">
+    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:.68rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:6px;">Próxima fórmula (intervalo de 3h)</div>
+    <div id="nextTime" style="font-size:1.6rem;font-weight:700;color:var(--sage-deep);"></div>
+    <div id="nextSub" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:.8rem;color:var(--muted);margin-top:3px;"></div>
+  </div>
+
+  <div class="card">
+    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:.68rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px;">Medicamentos</div>
+    <div class="med-grid">
+      <div class="med-box">
+        <div class="med-name">Colic Calm</div>
+        <div class="med-next" id="nextColic">—</div>
+        <div class="med-count" id="countColic">—</div>
+        <div class="row" style="margin:8px 0 0;">
+          <input type="time" id="colicTime" style="flex:1;">
+          <button class="med-btn colic" id="logColic">Registrar</button>
+        </div>
+      </div>
+      <div class="med-box">
+        <div class="med-name">Simeticona</div>
+        <div class="med-next" id="nextSimet">—</div>
+        <div class="med-count" id="countSimet">—</div>
+        <div class="row" style="margin:8px 0 0;">
+          <input type="time" id="simetTime" style="flex:1;">
+          <button class="med-btn simet" id="logSimet">Registrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="seg" id="tipoSeg">
+      <button data-tipo="peito" class="active">Só peito</button>
+      <button data-tipo="formula">Só fórmula</button>
+      <button data-tipo="mix">Peito + fórmula</button>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>Início</label>
+        <input type="time" id="inicio">
+      </div>
+      <div class="field">
+        <label>Término</label>
+        <input type="time" id="termino">
+      </div>
+    </div>
+
+    <div id="formulaBlock">
+      <label style="display:block;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:.68rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:5px;">Fórmula (ml) · meta até 80ml</label>
+      <input type="number" id="mlInput" placeholder="0" min="0" max="200">
+      <div class="ml-quick" id="mlQuick">
+        <button data-ml="30">30</button>
+        <button data-ml="35">35</button>
+        <button data-ml="40">40</button>
+        <button data-ml="45">45</button>
+        <button data-ml="50">50</button>
+        <button data-ml="55">55</button>
+        <button data-ml="60">60</button>
+        <button data-ml="65">65</button>
+        <button data-ml="70">70</button>
+        <button data-ml="75">75</button>
+        <button data-ml="80">80</button>
+      </div>
+      <div class="goal-bar"><div id="goalFill" style="width:0%"></div></div>
+      <div class="goal-label" id="goalLabel">0 de 80ml</div>
+    </div>
+
+    <div class="row" style="margin-top:12px;">
+      <div class="field">
+        <label>Observação (opcional)</label>
+        <input type="text" id="obs" placeholder="ex: arrotou, chorando...">
+      </div>
+    </div>
+
+    <button class="save-btn" id="saveBtn">Salvar mamada</button>
+  </div>
+
+  <div id="history"></div>
+</div>
+
+<div class="status" id="status">Salvo</div>
+
+<script>
+const STORAGE_KEY = 'ravi-mamadas';
+let entries = [];
+let tipo = 'peito';
+
+const tipoSeg = document.getElementById('tipoSeg');
+const formulaBlock = document.getElementById('formulaBlock');
+const mlInput = document.getElementById('mlInput');
+const mlQuick = document.getElementById('mlQuick');
+const goalFill = document.getElementById('goalFill');
+const goalLabel = document.getElementById('goalLabel');
+const inicioEl = document.getElementById('inicio');
+const terminoEl = document.getElementById('termino');
+const obsEl = document.getElementById('obs');
+const historyEl = document.getElementById('history');
+const statusEl = document.getElementById('status');
+
+function nowHM(){
+  const d = new Date();
+  return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+inicioEl.value = nowHM();
+
+function setTipo(t){
+  tipo = t;
+  [...tipoSeg.children].forEach(b=>b.classList.toggle('active', b.dataset.tipo===t));
+  formulaBlock.style.display = (t==='peito') ? 'none' : 'block';
+}
+tipoSeg.addEventListener('click', e=>{
+  const b = e.target.closest('button');
+  if(!b) return;
+  setTipo(b.dataset.tipo);
+});
+
+mlQuick.addEventListener('click', e=>{
+  const b = e.target.closest('button');
+  if(!b) return;
+  mlInput.value = b.dataset.ml;
+  updateGoal();
+  [...mlQuick.children].forEach(x=>x.classList.toggle('active', x===b));
+});
+mlInput.addEventListener('input', ()=>{
+  updateGoal();
+  [...mlQuick.children].forEach(x=>x.classList.remove('active'));
+});
+function updateGoal(){
+  const v = Math.max(0, parseInt(mlInput.value)||0);
+  const pct = Math.min(100, (v/80)*100);
+  goalFill.style.width = pct+'%';
+  goalLabel.textContent = v+' de 80ml';
+}
+
+function showStatus(msg){
+  statusEl.textContent = msg;
+  statusEl.classList.add('show');
+  setTimeout(()=>statusEl.classList.remove('show'), 1600);
+}
+
+function todayKey(){
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+const dataInputEl = document.getElementById('dataInput');
+dataInputEl.value = todayKey();
+
+function selectedDateKey(){
+  return dataInputEl.value || todayKey();
+}
+function selectedDateLabel(){
+  const [y,m,d] = selectedDateKey().split('-').map(Number);
+  return String(d).padStart(2,'0')+'/'+String(m).padStart(2,'0')+'/'+y;
+}
+
+function loadEntries(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    entries = raw ? JSON.parse(raw) : [];
+  }catch(e){
+    entries = [];
+  }
+  render();
+}
+
+function persist(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+  }catch(e){
+    console.error('storage error', e);
+    showStatus('Erro ao salvar');
+  }
+}
+
+document.getElementById('saveBtn').addEventListener('click', ()=>{
+  const inicio = inicioEl.value;
+  if(!inicio){ showStatus('Preencha o início'); return; }
+  const termino = terminoEl.value || null;
+  const ml = (tipo==='peito') ? null : Math.max(0, parseInt(mlInput.value)||0);
+  const obs = obsEl.value.trim();
+
+  const entry = {
+    id: Date.now()+'-'+Math.random().toString(36).slice(2,7),
+    dateKey: selectedDateKey(),
+    dateLabel: selectedDateLabel(),
+    tipo, inicio, termino, ml, obs,
+    createdAt: new Date().toISOString()
+  };
+  entries.unshift(entry);
+  persist();
+  render();
+  showStatus('Mamada registrada');
+
+  // reset form for next entry
+  inicioEl.value = nowHM();
+  terminoEl.value = '';
+  mlInput.value = '';
+  obsEl.value = '';
+  updateGoal();
+  [...mlQuick.children].forEach(x=>x.classList.remove('active'));
+});
+
+function deleteEntry(id){
+  entries = entries.filter(e=>e.id!==id);
+  persist();
+  render();
+  showStatus('Removido');
+}
+
+function tipoLabel(e){
+  if(e.tipo==='peito') return 'Só peito';
+  if(e.tipo==='formula') return 'Só fórmula';
+  return 'Peito + fórmula';
+}
+
+document.getElementById('colicTime').value = nowHM();
+document.getElementById('simetTime').value = nowHM();
+
+document.getElementById('logColic').addEventListener('click', ()=> logMed('Colic Calm', 'colicTime'));
+document.getElementById('logSimet').addEventListener('click', ()=> logMed('Simeticona', 'simetTime'));
+
+function logMed(medName, inputId){
+  const timeVal = document.getElementById(inputId).value || nowHM();
+  const entry = {
+    id: Date.now()+'-'+Math.random().toString(36).slice(2,7),
+    dateKey: selectedDateKey(),
+    dateLabel: selectedDateLabel(),
+    kind: 'med',
+    medName,
+    inicio: timeVal,
+    createdAt: new Date().toISOString()
+  };
+  entries.unshift(entry);
+  persist();
+  render();
+  showStatus(medName + ' registrado');
+  document.getElementById(inputId).value = nowHM();
+}
+
+const MED_INTERVAL_MIN = { 'Colic Calm': 60, 'Simeticona': 240 };
+const MED_MAX_24H = { 'Colic Calm': 4 }; // Simeticona: sem limite diário definido na receita, só intervalo
+
+function updateMedNext(){
+  const now = new Date();
+  ['Colic Calm','Simeticona'].forEach(medName=>{
+    const nextId = medName==='Colic Calm' ? 'nextColic' : 'nextSimet';
+    const countId = medName==='Colic Calm' ? 'countColic' : 'countSimet';
+    const nextEl = document.getElementById(nextId);
+    const countEl = document.getElementById(countId);
+
+    const doses = entries.filter(e=> e.kind==='med' && e.medName===medName);
+    if(doses.length===0){
+      nextEl.textContent = 'nenhuma dose registrada ainda';
+      nextEl.className = 'med-next';
+      countEl.textContent = '0 doses nas últimas 24h';
+      return;
+    }
+
+    const sorted = [...doses].sort((a,b)=> entryTimestamp(b) - entryTimestamp(a));
+    const last = sorted[0];
+    const lastTs = entryTimestamp(last);
+    const nextTs = new Date(lastTs.getTime() + MED_INTERVAL_MIN[medName]*60000);
+    const hh = String(nextTs.getHours()).padStart(2,'0');
+    const mm = String(nextTs.getMinutes()).padStart(2,'0');
+    const diffMin = Math.round((nextTs-now)/60000);
+
+    let statusText, statusClass;
+    if(diffMin<=0){
+      statusText = 'liberado desde ' + hh+':'+mm + (diffMin<0 ? ' ('+Math.abs(diffMin)+'min atrás)' : '');
+      statusClass = 'ready';
+    } else {
+      const hrs=Math.floor(diffMin/60), mins=diffMin%60;
+      statusText = 'próxima liberada às '+hh+':'+mm+' (em '+(hrs>0?hrs+'h ':'')+mins+'min)';
+      statusClass = 'waiting';
+    }
+    nextEl.textContent = 'última: '+last.inicio+' · '+statusText;
+    nextEl.className = 'med-next '+statusClass;
+
+    // doses in trailing 24h window
+    const cutoff = new Date(now.getTime() - 24*60*60*1000);
+    const last24 = doses.filter(e=> entryTimestamp(e) >= cutoff && entryTimestamp(e) <= now);
+    const usedCount = last24.length;
+
+    if(MED_MAX_24H[medName]){
+      const max = MED_MAX_24H[medName];
+      const remaining = Math.max(0, max - usedCount);
+      countEl.textContent = usedCount+' de '+max+' doses nas últimas 24h · restam '+remaining;
+    } else {
+      countEl.textContent = usedCount+' dose'+(usedCount!==1?'s':'')+' nas últimas 24h (sem limite diário na receita)';
+    }
+  });
+}
+
+function entryTimestamp(e){
+  // build a Date from dateKey + (termino || inicio)
+  const timeStr = e.termino || e.inicio;
+  if(!timeStr) return new Date(e.createdAt);
+  const [y,m,d] = e.dateKey.split('-').map(Number);
+  const [hh,mm] = timeStr.split(':').map(Number);
+  return new Date(y, m-1, d, hh, mm, 0, 0);
+}
+
+function updateNextEstimate(){
+  const nextCard = document.getElementById('nextCard');
+  const nextTimeEl = document.getElementById('nextTime');
+  const nextSubEl = document.getElementById('nextSub');
+
+  const formulaEntries = entries.filter(e => e.tipo==='formula' || e.tipo==='mix');
+  if(formulaEntries.length===0){
+    nextCard.style.display = 'none';
+    return;
+  }
+  const sorted = [...formulaEntries].sort((a,b)=> entryTimestamp(b) - entryTimestamp(a));
+  const last = sorted[0];
+  const lastTs = entryTimestamp(last);
+  const nextTs = new Date(lastTs.getTime() + 3*60*60*1000);
+
+  const hh = String(nextTs.getHours()).padStart(2,'0');
+  const mm = String(nextTs.getMinutes()).padStart(2,'0');
+  nextTimeEl.textContent = hh+':'+mm;
+
+  const now = new Date();
+  const diffMin = Math.round((nextTs - now)/60000);
+  let subText;
+  if(diffMin > 0){
+    const hrs = Math.floor(diffMin/60);
+    const mins = diffMin%60;
+    const parts = [];
+    if(hrs>0) parts.push(hrs+'h');
+    parts.push(mins+'min');
+    subText = 'em ' + parts.join(' ');
+  } else if(diffMin === 0){
+    subText = 'agora';
+  } else {
+    subText = 'atrasada em ' + Math.abs(diffMin) + 'min';
+  }
+  const lastTimeLabel = last.termino || last.inicio;
+  nextSubEl.textContent = subText + ' · última fórmula às ' + lastTimeLabel + (last.ml ? ' ('+last.ml+'ml)' : '');
+  nextCard.style.display = 'block';
+}
+
+function render(){
+  if(entries.length===0){
+    historyEl.innerHTML = '<div class="empty">Nenhuma mamada registrada ainda.<br>Preencha o formulário acima para começar.</div>';
+    updateNextEstimate();
+    updateMedNext();
+    return;
+  }
+  // sort by actual event time (not when it was typed in), so backfilled entries land correctly
+  const sorted = [...entries].sort((a,b)=> entryTimestamp(b) - entryTimestamp(a));
+  const groups = {};
+  sorted.forEach(e=>{
+    if(!groups[e.dateKey]) groups[e.dateKey] = [];
+    groups[e.dateKey].push(e);
+  });
+  const order = Object.keys(groups).sort((a,b)=> b.localeCompare(a)); // dateKey desc
+
+  let html = '';
+  order.forEach(dk=>{
+    const list = groups[dk];
+    const totalMl = list.reduce((s,e)=> s + (e.ml||0), 0);
+    const medCount = list.filter(e=>e.kind==='med').length;
+    const feedCount = list.length - medCount;
+    const label = list[0].dateLabel;
+    html += `<div class="day-heading"><span>${label}</span><span class="tot">${totalMl}ml fórmula · ${feedCount} mamada${feedCount!==1?'s':''} · ${medCount} dose${medCount!==1?'s':''}</span></div>`;
+    list.forEach(e=>{
+      if(e.kind==='med'){
+        const medCls = e.medName==='Colic Calm' ? 'med-colic' : 'med-simet';
+        html += `
+          <div class="entry ${medCls}">
+            <div class="dot"></div>
+            <div class="info">
+              <div class="time">${e.inicio}</div>
+              <div class="meta">${e.medName}</div>
+            </div>
+            <button class="del" data-id="${e.id}" aria-label="Excluir">✕</button>
+          </div>`;
+        return;
+      }
+      const cls = e.tipo==='formula' ? 'formula' : (e.tipo==='mix' ? 'mix' : '');
+      const timeStr = e.termino ? `${e.inicio} – ${e.termino}` : `${e.inicio} (início)`;
+      const mlTag = (e.ml!==null && e.ml!==undefined) ? `<div class="ml-tag">${e.ml}ml</div>` : '';
+      const metaParts = [tipoLabel(e)];
+      if(e.obs) metaParts.push(e.obs);
+      html += `
+        <div class="entry ${cls}">
+          <div class="dot"></div>
+          <div class="info">
+            <div class="time">${timeStr}</div>
+            <div class="meta">${metaParts.join(' · ')}</div>
+          </div>
+          ${mlTag}
+          <button class="del" data-id="${e.id}" aria-label="Excluir">✕</button>
+        </div>`;
+    });
+  });
+  historyEl.innerHTML = html;
+
+  historyEl.querySelectorAll('.del').forEach(btn=>{
+    btn.addEventListener('click', ()=> deleteEntry(btn.dataset.id));
+  });
+
+  updateNextEstimate();
+  updateMedNext();
+}
+
+document.getElementById('exportBtn').addEventListener('click', ()=>{
+  document.getElementById('exportText').value = buildExportText();
+  document.getElementById('exportOverlay').classList.add('show');
+});
+document.getElementById('closeExportBtn').addEventListener('click', ()=>{
+  document.getElementById('exportOverlay').classList.remove('show');
+});
+document.getElementById('copyExportBtn').addEventListener('click', async ()=>{
+  const ta = document.getElementById('exportText');
+  ta.select();
+  try{
+    await navigator.clipboard.writeText(ta.value);
+    showStatus('Copiado');
+  }catch(e){
+    document.execCommand('copy');
+    showStatus('Copiado');
+  }
+});
+document.getElementById('downloadExportBtn').addEventListener('click', ()=>{
+  const text = document.getElementById('exportText').value;
+  const blob = new Blob([text], {type:'text/plain;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'mamadas-ravi-'+todayKey()+'.txt';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showStatus('Baixando arquivo');
+});
+
+function buildExportText(){
+  const byDateTimeAsc = (a,b)=> entryTimestamp(a) - entryTimestamp(b);
+
+  const colic = entries.filter(e=> e.kind==='med' && e.medName==='Colic Calm').sort(byDateTimeAsc);
+  const simet = entries.filter(e=> e.kind==='med' && e.medName==='Simeticona').sort(byDateTimeAsc);
+  const feeds = entries.filter(e=> e.kind!=='med').sort(byDateTimeAsc);
+
+  const lines = [];
+  lines.push('CONTROLE DE MAMADAS E MEDICAMENTOS — RAVI');
+  lines.push('Exportado em ' + new Date().toLocaleString('pt-BR'));
+  lines.push('');
+  lines.push('=== COLIC CALM ('+colic.length+' doses) ===');
+  if(colic.length===0){ lines.push('(nenhum registro)'); }
+  colic.forEach(e=> lines.push(e.dateLabel+' '+e.inicio));
+  lines.push('');
+  lines.push('=== SIMETICONA ('+simet.length+' doses) ===');
+  if(simet.length===0){ lines.push('(nenhum registro)'); }
+  simet.forEach(e=> lines.push(e.dateLabel+' '+e.inicio));
+  lines.push('');
+  lines.push('=== MAMADAS ('+feeds.length+') ===');
+  if(feeds.length===0){ lines.push('(nenhum registro)'); }
+  feeds.forEach(e=>{
+    const timeStr = e.termino ? (e.inicio+'–'+e.termino) : (e.inicio+' (início)');
+    const parts = [e.dateLabel+' '+timeStr, tipoLabel(e)];
+    if(e.ml!==null && e.ml!==undefined) parts.push(e.ml+'ml fórmula');
+    if(e.obs) parts.push(e.obs);
+    lines.push(parts.join(' · '));
+  });
+
+  return lines.join('\n');
+}
+
+updateGoal();
+loadEntries();
+setInterval(()=>{ updateNextEstimate(); updateMedNext(); }, 60000);
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
