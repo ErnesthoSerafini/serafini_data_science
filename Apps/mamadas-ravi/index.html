@@ -453,7 +453,7 @@
     color:var(--muted);
     margin-bottom:6px;
   }
-  #exportText{
+  #exportText, #importText{
     flex:1;
     min-height:280px;
     width:100%;
@@ -502,6 +502,7 @@
     </div>
     <div style="display:flex;gap:8px;">
       <button id="settingsBtn" class="mini-btn" aria-label="Configurações">⚙</button>
+      <button id="importBtn" class="mini-btn" aria-label="Importar histórico">Importar</button>
       <button id="exportBtn" class="export-btn" aria-label="Exportar histórico">Exportar</button>
     </div>
   </header>
@@ -515,6 +516,18 @@
         <button id="copyExportBtn" class="modal-btn primary">Copiar</button>
         <button id="downloadExportBtn" class="modal-btn primary">Baixar .txt</button>
         <button id="closeExportBtn" class="modal-btn">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="importOverlay">
+    <div class="modal-box">
+      <div class="modal-title">Importar histórico</div>
+      <div class="modal-sub">Cole aqui o texto exportado do app antigo (botão Exportar → Copiar de lá). Registros que já existem aqui não são duplicados.</div>
+      <textarea id="importText" placeholder="Cole o texto exportado aqui..."></textarea>
+      <div class="modal-actions">
+        <button id="runImportBtn" class="modal-btn primary">Importar</button>
+        <button id="closeImportBtn" class="modal-btn">Fechar</button>
       </div>
     </div>
   </div>
@@ -1774,6 +1787,157 @@ function buildExportText(){
 
   return lines.join('\n');
 }
+
+// ---- Importar histórico exportado (deste app ou do app antigo) ----
+
+function entryKey(e){
+  if(e.kind==='med') return 'med|'+e.dateKey+'|'+e.inicio+'|'+e.medName;
+  return 'feed|'+e.dateKey+'|'+e.inicio+'|'+(e.termino||'')+'|'+e.tipo+'|'+(e.ml??'')+'|'+(e.obs||'');
+}
+function growthKey(g){
+  return 'growth|'+g.dateKey+'|'+(g.weightKg??'')+'|'+(g.heightCm??'');
+}
+
+function titleCaseFallback(s){
+  return s.toLowerCase().replace(/(^|\s)\S/g, c=>c.toUpperCase());
+}
+
+function parseLegacyExportText(text){
+  const lines = text.split(/\r?\n/);
+  const newEntries = [];
+  const newGrowth = [];
+  let section = null; // 'med' | 'mamadas' | 'crescimento' | null
+  let sectionMedName = null;
+  const tipoByLabel = { 'Só peito':'peito', 'Só fórmula':'formula', 'Peito + fórmula':'mix' };
+  const KNOWN_MED_NAMES = { 'COLIC CALM':'Colic Calm', 'SIMETICONA':'Simeticona' };
+
+  function toDateKey(dateLabel){
+    const m = dateLabel.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if(!m) return null;
+    return m[3]+'-'+m[2]+'-'+m[1];
+  }
+
+  for(const raw of lines){
+    const line = raw.trim();
+    if(!line) continue;
+
+    const headerMatch = line.match(/^===\s*(.+?)\s*\(/);
+    if(headerMatch){
+      const head = headerMatch[1].toUpperCase().replace(/\s*\(REMOVIDO\)?\s*$/,'').trim();
+      if(head === 'MAMADAS'){ section = 'mamadas'; sectionMedName = null; }
+      else if(head === 'CRESCIMENTO'){ section = 'crescimento'; sectionMedName = null; }
+      else {
+        section = 'med';
+        sectionMedName = KNOWN_MED_NAMES[head.replace(/\s*REMOVIDO$/,'').trim()] || titleCaseFallback(headerMatch[1]);
+      }
+      continue;
+    }
+    if(line === '(nenhum registro)') continue;
+    if(!section) continue;
+
+    if(section === 'med'){
+      const m = line.match(/^(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2})$/);
+      if(!m) continue;
+      const dateKey = toDateKey(m[1]);
+      if(!dateKey) continue;
+      newEntries.push({
+        id: 'imp-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),
+        dateKey, dateLabel: m[1],
+        kind: 'med',
+        medName: sectionMedName,
+        inicio: m[2],
+        createdAt: new Date().toISOString()
+      });
+    } else if(section === 'mamadas'){
+      const dm = line.match(/^(\d{2}\/\d{2}\/\d{4})\s+(.*)$/);
+      if(!dm) continue;
+      const dateLabel = dm[1];
+      const dateKey = toDateKey(dateLabel);
+      if(!dateKey) continue;
+      const parts = dm[2].split(' · ');
+      const timePart = parts.shift();
+      let inicio = null, termino = null;
+      const rangeMatch = timePart.match(/^(\d{2}:\d{2})–(\d{2}:\d{2})$/);
+      const startMatch = timePart.match(/^(\d{2}:\d{2})\s*\(início\)$/);
+      if(rangeMatch){ inicio = rangeMatch[1]; termino = rangeMatch[2]; }
+      else if(startMatch){ inicio = startMatch[1]; termino = null; }
+      else continue;
+
+      let tipo = null, ml = null;
+      const obsParts = [];
+      parts.forEach(p=>{
+        if(tipoByLabel[p] !== undefined){ tipo = tipoByLabel[p]; return; }
+        const mlMatch = p.match(/^(\d+)ml fórmula$/);
+        if(mlMatch){ ml = parseInt(mlMatch[1]); return; }
+        obsParts.push(p);
+      });
+      if(!tipo) continue;
+
+      newEntries.push({
+        id: 'imp-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),
+        dateKey, dateLabel,
+        tipo, inicio, termino, ml,
+        obs: obsParts.join(' · '),
+        createdAt: new Date().toISOString()
+      });
+    } else if(section === 'crescimento'){
+      const dm = line.match(/^(\d{2}\/\d{2}\/\d{4})(.*)$/);
+      if(!dm) continue;
+      const dateKey = toDateKey(dm[1]);
+      if(!dateKey) continue;
+      const parts = dm[2].split(' · ').map(p=>p.trim()).filter(Boolean);
+      let weightKg = null, heightCm = null;
+      parts.forEach(p=>{
+        const kgMatch = p.match(/^([\d.]+)kg$/);
+        const cmMatch = p.match(/^([\d.]+)cm$/);
+        if(kgMatch) weightKg = parseFloat(kgMatch[1]);
+        else if(cmMatch) heightCm = parseFloat(cmMatch[1]);
+      });
+      if(weightKg===null && heightCm===null) continue;
+      newGrowth.push({
+        id: 'impg-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),
+        dateKey, weightKg, heightCm,
+        createdAt: new Date().toISOString()
+      });
+    }
+  }
+  return { entries: newEntries, growth: newGrowth };
+}
+
+document.getElementById('importBtn').addEventListener('click', ()=>{
+  document.getElementById('importText').value = '';
+  document.getElementById('importOverlay').classList.add('show');
+});
+document.getElementById('closeImportBtn').addEventListener('click', ()=>{
+  document.getElementById('importOverlay').classList.remove('show');
+});
+document.getElementById('runImportBtn').addEventListener('click', ()=>{
+  const text = document.getElementById('importText').value;
+  if(!text.trim()){ showStatus('Cole o texto exportado primeiro'); return; }
+
+  const parsed = parseLegacyExportText(text);
+  if(parsed.entries.length===0 && parsed.growth.length===0){
+    showStatus('Nada reconhecido nesse texto');
+    return;
+  }
+
+  const existingEntryKeys = new Set(entries.map(entryKey));
+  const newEntriesToAdd = parsed.entries.filter(e=> !existingEntryKeys.has(entryKey(e)));
+  newEntriesToAdd.forEach(e=> entries.push(e));
+
+  const existingGrowthKeys = new Set(growth.map(growthKey));
+  const newGrowthToAdd = parsed.growth.filter(g=> !existingGrowthKeys.has(growthKey(g)));
+  newGrowthToAdd.forEach(g=> growth.push(g));
+
+  if(newEntriesToAdd.length) persist();
+  if(newGrowthToAdd.length){ persistGrowth(); renderGrowthSummary(); }
+  render();
+
+  const totalAdded = newEntriesToAdd.length + newGrowthToAdd.length;
+  const totalSkipped = (parsed.entries.length - newEntriesToAdd.length) + (parsed.growth.length - newGrowthToAdd.length);
+  document.getElementById('importOverlay').classList.remove('show');
+  showStatus(totalAdded+' registro'+(totalAdded!==1?'s':'')+' importado'+(totalAdded!==1?'s':'')+(totalSkipped>0 ? ' ('+totalSkipped+' já existiam)' : ''));
+});
 
 loadSettings();
 applySettings();
