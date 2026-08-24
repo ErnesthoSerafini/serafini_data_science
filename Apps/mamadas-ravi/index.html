@@ -573,6 +573,11 @@
       <label class="modal-field-label">Data de nascimento do Ravi</label>
       <input type="date" id="settingsBirthDate">
       <div class="modal-sub" style="margin-top:6px;margin-bottom:0;">Usada para calcular a idade em meses no gráfico de crescimento.</div>
+
+      <label class="modal-field-label" style="margin-top:16px;">Sincronização entre celulares</label>
+      <div id="syncStatus" class="modal-sub" style="margin-bottom:8px;">—</div>
+      <div id="syncControls"></div>
+
       <div class="modal-actions">
         <button id="saveSettingsBtn" class="modal-btn primary">Salvar</button>
         <button id="cancelSettingsBtn" class="modal-btn">Cancelar</button>
@@ -749,13 +754,24 @@
 
 <div class="status" id="status">Salvo</div>
 
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-database-compat.js"></script>
 <script>
 const STORAGE_KEY = 'ravi-mamadas';
 const MED_STORAGE_KEY = 'ravi-meds';
 const FORMULA_CFG_KEY = 'ravi-formula-config';
 const SETTINGS_KEY = 'ravi-settings';
 const GROWTH_KEY = 'ravi-growth';
+const SYNC_CODE_KEY = 'ravi-sync-code';
 const MED_COLORS = ['#c98a3b','#3d574c','#5c7c6f','#b2543f','#8b6f47','#4a6fa5','#a85f8a','#5f8a7a'];
+
+// Preencher com o objeto firebaseConfig do seu projeto Firebase (Configurações do projeto → Seus apps)
+// para ativar a sincronização entre aparelhos. Deixe vazio para o app funcionar só localmente.
+const firebaseConfig = {};
+
+function firebaseConfigured(){
+  return !!(firebaseConfig && firebaseConfig.apiKey && firebaseConfig.databaseURL);
+}
 
 let entries = [];
 let meds = [];
@@ -763,6 +779,12 @@ let growth = [];
 let formulaConfig = { max: 80, step: 10 };
 let settings = { appName: 'Diário do Ravi', birthDate: '' };
 let tipo = 'peito';
+
+let syncCode = localStorage.getItem(SYNC_CODE_KEY) || '';
+let applyingRemote = false;
+let fbApp = null;
+let fbDb = null;
+let cloudListenerRef = null;
 
 const tipoSeg = document.getElementById('tipoSeg');
 const formulaBlock = document.getElementById('formulaBlock');
@@ -839,6 +861,7 @@ function loadFormulaConfig(){
 }
 function persistFormulaConfig(){
   localStorage.setItem(FORMULA_CFG_KEY, JSON.stringify(formulaConfig));
+  pushToCloud();
 }
 
 document.querySelectorAll('.stepper-btn').forEach(btn=>{
@@ -909,6 +932,7 @@ function loadEntries(){
 function persist(){
   try{
     localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+    pushToCloud();
   }catch(e){
     console.error('storage error', e);
     showStatus('Erro ao salvar');
@@ -1056,6 +1080,7 @@ function loadSettings(){
 }
 function persistSettings(){
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  pushToCloud();
 }
 function applySettings(){
   document.getElementById('appTitle').textContent = settings.appName || 'Diário do Ravi';
@@ -1065,6 +1090,7 @@ function applySettings(){
 document.getElementById('settingsBtn').addEventListener('click', ()=>{
   document.getElementById('settingsAppName').value = settings.appName;
   document.getElementById('settingsBirthDate').value = settings.birthDate || '';
+  renderSyncUI();
   document.getElementById('settingsOverlay').classList.add('show');
 });
 document.getElementById('cancelSettingsBtn').addEventListener('click', ()=>{
@@ -1089,6 +1115,132 @@ function ageMonthsAt(dateKey){
   return Math.max(0, months);
 }
 
+// ---- Sincronização entre celulares (Firebase Realtime Database) ----
+
+function initFirebase(){
+  if(!firebaseConfigured()) return false;
+  if(typeof firebase === 'undefined') return false;
+  if(!fbApp){
+    try{
+      fbApp = firebase.initializeApp(firebaseConfig);
+      fbDb = firebase.database();
+    }catch(err){
+      console.error('firebase init error', err);
+      return false;
+    }
+  }
+  return true;
+}
+
+function pushToCloud(){
+  if(applyingRemote) return;
+  if(!syncCode || !initFirebase()) return;
+  fbDb.ref('families/'+syncCode).set({
+    entries, meds, formulaConfig, settings, growth,
+    updatedAt: Date.now()
+  }).catch(err=>{ console.error('sync push error', err); showStatus('Falha ao sincronizar'); });
+}
+
+function startCloudSync(){
+  if(!syncCode || !initFirebase()) return;
+  if(cloudListenerRef) return;
+  cloudListenerRef = fbDb.ref('families/'+syncCode);
+  cloudListenerRef.on('value', snap=>{
+    const data = snap.val();
+    if(!data) return;
+    applyingRemote = true;
+
+    const medsChanged = JSON.stringify(data.meds||[]) !== JSON.stringify(meds);
+    const formulaChanged = JSON.stringify(data.formulaConfig||formulaConfig) !== JSON.stringify(formulaConfig);
+
+    entries = data.entries || [];
+    if(data.meds) meds = data.meds;
+    if(data.formulaConfig) formulaConfig = data.formulaConfig;
+    settings = { appName:'Diário do Ravi', birthDate:'', ...(data.settings||{}) };
+    growth = data.growth || [];
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+    localStorage.setItem(MED_STORAGE_KEY, JSON.stringify(meds));
+    localStorage.setItem(FORMULA_CFG_KEY, JSON.stringify(formulaConfig));
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    localStorage.setItem(GROWTH_KEY, JSON.stringify(growth));
+
+    applySettings();
+    if(medsChanged) renderMedGrid();
+    if(formulaChanged) renderMlQuick();
+    renderGrowthSummary();
+    updateGoal();
+    render();
+
+    applyingRemote = false;
+  }, err=>{ console.error('sync listen error', err); showStatus('Falha ao sincronizar'); });
+}
+
+function stopCloudSync(){
+  if(cloudListenerRef){ cloudListenerRef.off(); cloudListenerRef = null; }
+  syncCode = '';
+  localStorage.removeItem(SYNC_CODE_KEY);
+}
+
+function generateSyncCode(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for(let i=0;i<8;i++) code += chars[Math.floor(Math.random()*chars.length)];
+  return code;
+}
+
+function renderSyncUI(){
+  const statusEl = document.getElementById('syncStatus');
+  const controlsEl = document.getElementById('syncControls');
+  if(!firebaseConfigured()){
+    statusEl.textContent = 'Sincronização ainda não configurada neste app.';
+    controlsEl.innerHTML = '';
+    return;
+  }
+  if(syncCode){
+    statusEl.innerHTML = 'Sincronizando com o código <strong>'+escapeHtml(syncCode)+'</strong>. Use o mesmo código no outro celular.';
+    controlsEl.innerHTML = `
+      <div class="modal-actions" style="margin-top:0;">
+        <button id="copySyncCodeBtn" class="modal-btn">Copiar código</button>
+        <button id="disableSyncBtn" class="modal-btn">Desativar</button>
+      </div>`;
+    document.getElementById('copySyncCodeBtn').addEventListener('click', async ()=>{
+      try{ await navigator.clipboard.writeText(syncCode); showStatus('Código copiado'); }catch(e){}
+    });
+    document.getElementById('disableSyncBtn').addEventListener('click', ()=>{
+      if(!confirm('Desativar sincronização neste aparelho? Os dados já salvos aqui continuam, mas param de ser atualizados automaticamente.')) return;
+      stopCloudSync();
+      renderSyncUI();
+      showStatus('Sincronização desativada');
+    });
+  } else {
+    statusEl.textContent = 'Sem sincronização ativa — os dados ficam só neste aparelho.';
+    controlsEl.innerHTML = `
+      <div class="modal-actions" style="margin-top:0;">
+        <button id="createSyncBtn" class="modal-btn primary">Criar sincronização</button>
+        <button id="joinSyncBtn" class="modal-btn">Já tenho um código</button>
+      </div>`;
+    document.getElementById('createSyncBtn').addEventListener('click', ()=>{
+      syncCode = generateSyncCode();
+      localStorage.setItem(SYNC_CODE_KEY, syncCode);
+      startCloudSync();
+      pushToCloud();
+      renderSyncUI();
+      showStatus('Sincronização criada');
+    });
+    document.getElementById('joinSyncBtn').addEventListener('click', ()=>{
+      const code = prompt('Digite o código de sincronização compartilhado pelo outro celular:');
+      if(!code) return;
+      if(!confirm('Isso vai substituir os dados deste aparelho pelos dados já compartilhados nesse código. Continuar?')) return;
+      syncCode = code.trim().toUpperCase();
+      localStorage.setItem(SYNC_CODE_KEY, syncCode);
+      startCloudSync();
+      renderSyncUI();
+      showStatus('Conectado à sincronização');
+    });
+  }
+}
+
 // ---- Medicamentos ----
 
 function loadMeds(){
@@ -1104,6 +1256,7 @@ function loadMeds(){
 }
 function persistMeds(){
   localStorage.setItem(MED_STORAGE_KEY, JSON.stringify(meds));
+  pushToCloud();
 }
 
 function medDosesFor(med){
@@ -1272,6 +1425,7 @@ function loadGrowth(){
 }
 function persistGrowth(){
   localStorage.setItem(GROWTH_KEY, JSON.stringify(growth));
+  pushToCloud();
 }
 
 function renderGrowthSummary(){
@@ -1623,6 +1777,7 @@ renderGrowthSummary();
 renderMlQuick();
 updateGoal();
 loadEntries();
+if(syncCode) startCloudSync();
 setInterval(()=>{ updateNextEstimate(); updateMedNext(); }, 60000);
 
 if('serviceWorker' in navigator){
