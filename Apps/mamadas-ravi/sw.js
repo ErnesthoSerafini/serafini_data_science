@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mamadas-ravi-v2';
+const CACHE_NAME = 'mamadas-ravi-v4';
 const ASSETS = ['./', './index.html', './manifest.json', './icon.svg'];
 
 self.addEventListener('install', (event) => {

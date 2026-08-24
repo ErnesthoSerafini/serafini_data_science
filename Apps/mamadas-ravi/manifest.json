@@ -1,7 +1,7 @@
 {
-  "name": "Mamadas do Ravi",
-  "short_name": "Mamadas Ravi",
-  "description": "Registro rápido de mamadas e medicamentos, com histórico e exportação.",
+  "name": "Diário do Ravi",
+  "short_name": "Diário do Ravi",
+  "description": "Registro rápido de mamadas, medicamentos e crescimento, com histórico e exportação.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
